@@ -13,7 +13,7 @@ djangorestframework==3.11.0
 filelock==3.0.12
 idna==2.8
 phonenumbers==8.10.23
-psycopg2==2.8.4
+# psycopg2==2.8.4
 pytz==2019.3
 requests==2.22.0
 six==1.14.0
