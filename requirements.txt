@@ -13,7 +13,6 @@ djangorestframework==3.11.0
 filelock==3.0.12
 idna==2.8
 phonenumbers==8.10.23
-Pillow==6.2.1
 psycopg2==2.8.4
 pytz==2019.3
 requests==2.22.0
@@ -24,8 +23,5 @@ virtualenv==20.0.10
 virtualenv-clone==0.5.3
 wincertstore==0.2
 django-cors-headers==3.2.1
-djangorestframework
 markdown
-django-filter
-psycopg2
 pillow==7.1.1
