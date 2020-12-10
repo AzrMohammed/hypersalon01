@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.template.defaultfilters import slugify
 from GEN import GEN_Constants, GEN_Constants_model
 from django.contrib.auth.models import AbstractUser
-from django.contrib.postgres.fields import ArrayField
+# from django.contrib.postgres.fields import ArrayField
 
 from django.contrib.auth.models import User
 from django.template.defaultfilters import slugify
