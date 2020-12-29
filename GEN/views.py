@@ -2491,7 +2491,7 @@ def appendServerPath(relative_path):
     a = str(relative_path)
     return GEN_Constants.SERVER_PREFIX+"media/"+a
 
-def user_login2(request):
+def user_login(request):
     return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"INVALID DATA", "ERRORS": {}}),
     content_type="application/json")
 
@@ -2528,9 +2528,9 @@ def user_login(request):
 
     else:
         print('jdkada')
-        return render(request, 'GEN/login.html', {})
+        return render(request, 'GEN/index.html', {})
 
-    # return render(request, 'GEN/login.html', {})
+    # return render(request, 'GEN/login2.html', {})
 #
 #
 # class EnterPriseForm(APIView):
@@ -2689,7 +2689,7 @@ def user_logind(request):
     #
     # else:
     #     print('jdkada')
-    #     return render(request, 'GEN/login.html', {})
+    #     return render(request, 'GEN/login2.html', {})
 
 
 def index(request):
