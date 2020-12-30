@@ -2495,6 +2495,15 @@ def user_login(request):
     return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"INVALID DATA", "ERRORS": {}}),
     content_type="application/json")
 
+def get_html_privacy_policy(request):
+    return render(request, 'GEN/privacy_policy.html', {})
+
+def get_html_index(request):
+    return render(request, 'GEN/index.html', {})
+
+def get_html_terms_and_conditions(request):
+    return render(request, 'GEN/terms_and_conditions.html', {})
+
 def user_login(request):
     # return HttpResponse("Hi came view")
 

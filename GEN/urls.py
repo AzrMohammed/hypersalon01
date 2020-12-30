@@ -5,7 +5,10 @@ from GEN import views
 app_name = 'GEN'
 
 urlpatterns =[
-path('',views.user_login, name = "index"),
+path('',views.get_html_index, name = "index"),
+path('safez/',views.get_html_index, name = ""),
+path('safez/privacy-policy/',views.get_html_privacy_policy, name = ""),
+path('safez/terms-of-use/',views.get_html_terms_and_conditions, name = ""),
 path('user_login/',views.user_login, name = "user_login"),
 path('StoreBranchList/',views.StoreBranchList.as_view(), name = "StoreBranchList"),
 path('StoreCategoryList/',views.StoreCategoryList.as_view(), name = "StoreCategoryList"),

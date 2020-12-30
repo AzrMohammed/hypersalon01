@@ -29,10 +29,17 @@ ORDER_STATUS_COMPLETED = "ORD_COMPLETED"
 
 
 def getFcmApiKey(app_user_type):
+    # hypersalon
+    # if app_user_type == APP_USER_TYPE_CUSTOMER:
+    #     return "AAAAz7OAjKM:APA91bGEsAA_CSXAwE0KBHx-_SUAG8Bpfj4yKAD5oBudCuD1ol9ogcjrGduByb0o7ZnVdFTYQzv342H_Rpl06N715mu4Do_7L7IXNx3wYVu_fDKI27Mkl3p0YEw0LrHj-Hpqte25Awi5"
+    # elif app_user_type == APP_USER_TYPE_BRANCH_AGENT or app_user_type == APP_USER_TYPE_BUSINESS_OWNER:
+    #     return "AAAAN0FaarA:APA91bFo8rvomXkSWLgAG9bzvO5HmkRP937Z8glH7YSGP50bTZoxn6nWclnGQROjG2VajXGfJDG_Tra_NBUwmTPZyA84N1lySVq0STJNx7qgYob2a3HqHbIQjl9iNnFYit47VQCkQt8H"
+
+    # safez
     if app_user_type == APP_USER_TYPE_CUSTOMER:
-        return "AAAAz7OAjKM:APA91bGEsAA_CSXAwE0KBHx-_SUAG8Bpfj4yKAD5oBudCuD1ol9ogcjrGduByb0o7ZnVdFTYQzv342H_Rpl06N715mu4Do_7L7IXNx3wYVu_fDKI27Mkl3p0YEw0LrHj-Hpqte25Awi5"
+        return "AAAAGOBvZ8M:APA91bFb4NF50EGwalrwgdvm__wR8cY3NIGeITqcOaAhOUqZPJf-Ge8ujkJcKVR-xAsVdXzFEOFhdvRWeiddtTC1I_14re54HgA7AxXaeg07-ftXPDfH9-Qh5YQTFbkD02xC7cV6DF2c"
     elif app_user_type == APP_USER_TYPE_BRANCH_AGENT or app_user_type == APP_USER_TYPE_BUSINESS_OWNER:
-        return "AAAAN0FaarA:APA91bFo8rvomXkSWLgAG9bzvO5HmkRP937Z8glH7YSGP50bTZoxn6nWclnGQROjG2VajXGfJDG_Tra_NBUwmTPZyA84N1lySVq0STJNx7qgYob2a3HqHbIQjl9iNnFYit47VQCkQt8H"
+        return "AAAA5_LZ6Ac:APA91bEEIOqZsIEaOrjsKmwVxJahyIpWjj3r-Go_z-Ocn0RSOojjrhWGWCIaPJGIDejizwpW1F6Hfr3ylOKaXCME7ZMITRxP0I6Tp0p6alrhHPKw1uODa0C7a2B1q4XjjbxXkT3ubmwx"
 
 
 
