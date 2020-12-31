@@ -2503,7 +2503,8 @@ def get_html_index(request):
 
 def get_html_terms_and_conditions(request):
     return render(request, 'GEN/terms_and_conditions.html', {})
-
+def get_html_safez(request):
+    return render(request, 'GEN/safez.html', {})
 def user_login(request):
     # return HttpResponse("Hi came view")
 

@@ -6,7 +6,7 @@ app_name = 'GEN'
 
 urlpatterns =[
 path('',views.get_html_index, name = "index"),
-path('safez/',views.get_html_index, name = ""),
+path('safez/',views.get_html_safez, name = ""),
 path('safez/privacy-policy/',views.get_html_privacy_policy, name = ""),
 path('safez/terms-of-use/',views.get_html_terms_and_conditions, name = ""),
 path('user_login/',views.user_login, name = "user_login"),

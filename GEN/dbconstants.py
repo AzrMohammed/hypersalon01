@@ -203,3 +203,24 @@ PRIORITY_LIST = [
 ]
 
 PRIORITY_LIST_DICT = dict(PRIORITY_LIST)
+
+DAY_NONE = 1001
+DAY_MON = 1
+DAY_TUE = 2
+DAY_WED = 3
+DAY_THU = 4
+DAY_FRI = 5
+DAY_SAT = 6
+DAY_SUN = 7
+DAY_OF_WEEK_LIST = [
+(DAY_NONE, "None"),
+(DAY_MON, "Monday"),
+(DAY_TUE, "Tuesday"),
+(DAY_WED, "Wednesday"),
+(DAY_THU, "Thursday"),
+(DAY_FRI, "Friday"),
+(DAY_SAT, "Saturday"),
+(DAY_SUN, "Sunday")
+]
+
+DAY_OF_WEEK_LIST_DICT = dict(PRIORITY_LIST)

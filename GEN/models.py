@@ -121,6 +121,18 @@ class BrandBranchBasicInfo(models.Model):
     def __str__(self):
         return str(self.name)
 
+class ServisableDaysCriteria(models.Model):
+    brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
+    branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
+    service_start_time = models.DateTimeField(blank=True, null=True)
+    service_end_time = models.DateTimeField(blank=True, null=True)
+    day_of_week = models.IntegerField(choices=dbconstants.DAY_OF_WEEK_LIST,  default=dbconstants.DAY_NONE)
+
+class BrandBranchServisableCriteria(models.Model):
+    brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
+    branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
+
+
 
 
 class C19SymptomSet(models.Model):
