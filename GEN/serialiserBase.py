@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from GEN import dbconstants
+from GEN import dbconstants, GEN_Constants
 from .models import UserProfileInfo, CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, ProductCategory, \
     Product, ProductBase, ItemMeasuementUnit, OrderItem, C19SymptomSet, UserHealthProfile, Order, BrandBranchBasicInfo, \
     BranchServisableCategory, BranchServisableProductBase, BranchServisableProduct
@@ -99,12 +99,74 @@ class OrderSerializer(serializers.ModelSerializer):
 class CustomerAllOrderSerializer(serializers.ModelSerializer):
     order_item = serializers.SerializerMethodField()
     order_status = serializers.SerializerMethodField()
-    # status_text = serializers.SerializerMethodField()
+    status_title = serializers.SerializerMethodField()
+    status_text = serializers.SerializerMethodField()
+
+    branch_lat = serializers.SerializerMethodField()
+    branch_long = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
+    branch_address = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['id', 'order_id', 'delivery_charges', 'schedule_requested_time', 'checked_in_time', 'order_status', 'order_item']
+        fields = ['id', 'order_id', 'delivery_charges', 'schedule_requested_time', 'checked_in_time', 'order_status', 'order_item', 'status_title', 'status_text', 'branch_address', 'branch_name', 'branch_lat', 'branch_long']
 
+
+    def get_branch_name(self, obj):
+        return obj.branch.name
+
+    def get_branch_address(self, obj):
+        return obj.branch.address_text
+
+    def get_branch_lat(self, obj):
+        return obj.branch.location_latitude
+
+    def get_branch_long(self, obj):
+        return obj.branch.location_langitude
+
+    def get_status_title(self, obj):
+
+        status = "Pending Approval";
+        order_status = obj.order_status.code
+
+        if order_status == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
+            status = "Order Approved"
+        elif order_status == GEN_Constants.ORDER_STATUS_INITIATED:
+            status = "Pending Approval"
+        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT:
+            status = "Order Rejected"
+        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_OTHERS:
+            status = "Order Rejected"
+        elif order_status == GEN_Constants.ORDER_STATUS_NO_SHOW:
+            status = "Not Reachable"
+        elif order_status == GEN_Constants.ORDER_STATUS_ONGOING:
+            status = "Ongoing"
+        elif order_status == GEN_Constants.ORDER_STATUS_COMPLETED:
+            status = "Completed"
+
+        return status
+
+    def get_status_text(self, obj):
+
+        status = "Pending Approval";
+        order_status = obj.order_status.code
+
+        if order_status == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
+            status = "Show the QR Code for easy check-in"
+        elif order_status == GEN_Constants.ORDER_STATUS_INITIATED:
+            status = "Please be patient. the agent will approve shortly."
+        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT:
+            status = "No slot available"
+        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_OTHERS:
+            status = "Not operating in requested time"
+        elif order_status == GEN_Constants.ORDER_STATUS_NO_SHOW:
+            status = "You have not checked-In for the Appointment"
+        elif order_status == GEN_Constants.ORDER_STATUS_ONGOING:
+            status = "Appointment marked as Ongoing"
+        elif order_status == GEN_Constants.ORDER_STATUS_COMPLETED:
+            status = "Booking has been marked as completed"
+
+        return status
 
     def get_order_status(self, obj):
         if obj.order_status is not None:
@@ -231,10 +293,15 @@ class ItemMeasuementUnitSerializer(serializers.ModelSerializer):
 
 
 class BrandBranchBasicInfoSerializer(serializers.ModelSerializer):
+    phone = serializers.SerializerMethodField()
     class Meta:
         model = BrandBranchBasicInfo
-        fields = ['id', 'name', 'description', 'address_text', 'branch_base_image', 'status', 'is_available', 'is_online', 'location_latitude', 'location_langitude']
+        fields = ['id', 'name', 'description', 'address_text', 'branch_base_image', 'status', 'is_available', 'is_online', 'location_latitude', 'location_langitude' , 'phone']
         depth = 0
+
+    def get_phone(self, obj):
+        return "9999999999"
+
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:

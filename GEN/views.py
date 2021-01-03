@@ -547,33 +547,50 @@ class CustomerOrder(APIView):
 
         return Response(base_data)
 
-        #
-        # category = ProductCategory.objects.filter(is_available=True)
-        # serializer_cat = ProductCategorySerializer(category, many=True)
-        #
-        #
-        # itemMeasuementUnit_base = ItemMeasuementUnit.objects.filter(is_available=True)
-        # serialiser_itemMeasuementUnit_base = ItemMeasuementUnitSerializer(itemMeasuementUnit_base, many=True)
-        #
-        # base_data = {}
-        #
-        # base_data["uom"] = serialiser_itemMeasuementUnit_base.data
-        # base_data["category"] = serializer_cat.data
-        #
-        # return Response(base_data)
+class CustomerOrderUpcoming(APIView):
 
-    # def post(self,request):
-    #     phone = "9080349072"
-    #     user_p = UserProfileInfo.objects.get(phone_primary=phone)
-    #
-    #     order_list = Order.objects.filter(user_customer = user_p).order_by('-updated_at')
-    #     order_list_s =  OrderSerializer(order_list, many=True)
-    #
-    #
-    #     base_data = {}
-    #     base_data["order"] = order_list_s.data
-    #
-    #     return Response(base_data)
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        phone = received_json_data["user_phone"]
+        user_p = UserProfileInfo.objects.get(phone_primary=phone)
+
+
+
+        order_list = Order.objects.filter(user_customer = user_p, order_status__code = GEN_Constants.ORDER_STATUS_AGENT_APPROVED).order_by('schedule_requested_time')
+        order_list_s = CustomerAllOrderSerializer(order_list, many=True)
+
+
+        base_data = {}
+        base_data["order_list"] = order_list_s.data
+        # base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
+        # base_data["status_text"] = "RECEIVED"
+
+        return Response(base_data)
+
+class CustomerOrderOthers(APIView):
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        phone = received_json_data["user_phone"]
+        user_p = UserProfileInfo.objects.get(phone_primary=phone)
+        order_list = Order.objects.filter(user_customer = user_p).exclude(order_status__code = GEN_Constants.ORDER_STATUS_AGENT_APPROVED).order_by('-updated_at')
+        order_list_s = CustomerAllOrderSerializer(order_list, many=True)
+
+
+        base_data = {}
+        base_data["order_list"] = order_list_s.data
+        # base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
+        # base_data["status_text"] = "RECEIVED"
+
+        return Response(base_data)
 
 
 
@@ -1320,6 +1337,13 @@ def validate_user(request):
             user_data["location_longitude"] = user_profile.location_latitude
             user_data["user_id"] = user_profile.id
             user_data["brand_id"] = brand_c.id
+
+            brand_details = {}
+            brand_details["brand_name"] = brand_c.name
+            brand_details["contact"] = ""
+            brand_details["code"] = brand_c.id
+            user_data["brand_details"] = brand_details
+
 
             return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA": user_data, "RESPONSE_MESSAGE":"User Exist"}), content_type="application/json")
 
@@ -2504,7 +2528,7 @@ def get_html_index(request):
 def get_html_terms_and_conditions(request):
     return render(request, 'GEN/terms_and_conditions.html', {})
 def get_html_safez(request):
-    return render(request, 'GEN/safez.html', {})
+    return render(request, 'GEN/safez_index.html', {})
 def user_login(request):
     # return HttpResponse("Hi came view")
 

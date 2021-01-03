@@ -38,6 +38,8 @@ path('BranchProductListServisableCategorySpecificDisabled/', views.BranchProduct
 path('BranchProductListCustomer/', views.BranchProductListCustomer.as_view(), name = "BranchProductListCustomer"),
 path('SymptomSet/', views.SymptomSet.as_view(), name = "SymptomSet"),
 path('CustomerOrder/', views.CustomerOrder.as_view(), name = "CustomerOrder"),
+path('CustomerOrderUpcoming/', views.CustomerOrderUpcoming.as_view(), name = "CustomerOrderUpcoming"),
+path('CustomerOrderOthers/', views.CustomerOrderOthers.as_view(), name = "CustomerOrderOthers"),
 path('OrderAcceptedByAgent/', views.OrderAcceptedByAgent.as_view(), name = "OrderAcceptedByAgent"),
 path('OrderRejectedByAgent/', views.OrderRejectedByAgent.as_view(), name = "OrderRejectedByAgent"),
 path('OrderMarkAsCompleted/', views.OrderMarkAsCompleted.as_view(), name = "OrderMarkAsCompleted"),
