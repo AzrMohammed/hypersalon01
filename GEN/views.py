@@ -1,47 +1,56 @@
-from django.shortcuts import render
-from django.contrib.auth import authenticate
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+import datetime
 import json
-
-from DbUtils import db_operations_support, support_serializer_submit, support_db
-from .serialiserBase import CMN_CommunicationVirtualModelSerializer, EnterPriseForm, \
-    CMN_CommunicationPhysicalModelSerializer, ProductCategorySerializer, ProductSerializer, ProductBaseSerializer, \
-    ItemMeasuementUnitSerializer, C19SymptomSetSerializer, UserHealthProfileSerializer, OrderSerializer, \
-    UserProfileInfoSerializer, UserProfileSuggestionSerializer, ProductSuggestionListSerializer, \
-    BrandBranchBasicInfoSerializer, BranchAgentListSerializer, BranchOrderListSerializer, OrderDetail01Serializer, \
-    ProductCategorySerializerBranchUser, ServisableProductSerializerBranchUser, ServisableProductSerializerCustomer, \
-    CustomerAllOrderSerializer
-from .models import CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, Order, UserProfileInfo, OrderItem, \
-    ItemMeasuementUnit, ProductCategory, Product, ProductBase, ItemMeasuementUnit, OrderLog, OrderItemLog, \
-    C19SymptomSet, UserHealthProfile, BrandBranchBasicInfo, BranchServisableCategory, BranchServisableProduct, \
-    BranchServisableProductBase, AppUserType, BrandBasicInfo, OrderStatus
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.contrib.auth.models import User
-import collections
-from django.views.decorators.csrf import csrf_exempt
-from django.utils import six
 import random
 import string
-import datetime
-from django.utils import timezone
+
+from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from GEN import dbconstants
-from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
-from GEN.forms import UserFormCustomer, UserProfileInfoForm, UserForm,OrderForm, UserParentForm,  OrderItemForm, IOrderForm, IOrderItemForm, OrderLogForm, OrderItemLogForm, UserHealthProfileForm
-from GEN import GEN_Constants, GEN_Constants_model
+from django.contrib.auth.models import User
 from django.core import serializers
-
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from fcm_django.models import FCMDevice
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from DbUtils import db_operations_support, support_serializer_submit, support_db
+from GEN import GEN_Constants
+from GEN import dbconstants
+from GEN.forms import UserFormCustomer, UserProfileInfoForm, IOrderForm, IOrderItemForm, OrderLogForm, OrderItemLogForm, \
+    UserHealthProfileForm
+from .models import Order, UserProfileInfo, OrderItem, \
+    ProductCategory, Product, ProductBase, ItemMeasuementUnit, C19SymptomSet, BrandBranchBasicInfo, \
+    BranchServisableCategory, BranchServisableProduct, \
+    BranchServisableProductBase, AppUserType, BrandBasicInfo, OrderStatus, ServisableDaysCriteria
+from .serialiserBase import EnterPriseForm, \
+    CMN_CommunicationPhysicalModelSerializer, ProductCategorySerializer, ProductSerializer, ProductBaseSerializer, \
+    ItemMeasuementUnitSerializer, C19SymptomSetSerializer, UserProfileInfoSerializer, UserProfileSuggestionSerializer, \
+    ProductSuggestionListSerializer, \
+    BrandBranchBasicInfoSerializer, BranchAgentListSerializer, BranchOrderListSerializer, OrderDetail01Serializer, \
+    ProductCategorySerializerBranchUser, ServisableProductSerializerBranchUser, ServisableProductSerializerCustomer, \
+    CustomerAllOrderSerializer, BranchDetailAdminSerializer, ProductCategorySerializerAd, StoreUomSerializer
+
+import base64
+from django.core.files.base import ContentFile
 
 
+def get_file_from_base64(b64_string):
 
+    image_data = b64_string
+    format, imgstr = image_data.split(';base64,')
+    print("format", format)
+    ext = format.split('/')[-1]
+
+    data = ContentFile(base64.b64decode(imgstr))
+    return data
+
+    # file_name = "'myphoto." + ext
+    # user.image.save(file_name, data, save=True)
 
 class BrandBranchOrdersOngoing(APIView):
 
@@ -201,6 +210,395 @@ class BrandBranchOrdersFiltered(APIView):
         base_data["status_text"] = "RECEIVED"
 
         return Response(base_data)
+
+class GetBrandBranchDetailAdmin(APIView):
+
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        brandbranch_id = received_json_data["brand_branch_id"]
+
+        branch_detail = BrandBranchBasicInfo.objects.get(id = brandbranch_id)
+
+        order_list_s = BranchDetailAdminSerializer(branch_detail, many=False)
+
+
+        base_data = {}
+        base_data["SUCCESS"] = True
+        base_data["RESPONSE_MESSAGE"] = "Details Fetched Successful"
+        base_data["RESPONSE_DATA"] = order_list_s.data
+
+        return Response(base_data)
+
+
+class CreateProduct(APIView):
+
+    def update_product_in_servisable_branches(self, product_id, product_dataset):
+        # class BranchServisableProduct(models.Model):
+        #     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+        #     branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE)
+        #     price = models.FloatField(default=0, blank=True)
+        #     status = models.CharField(max_length=2, choices=dbconstants.STATUS, default=dbconstants.STATUS_ACTIVE)
+        #     created_at = models.DateTimeField(auto_now_add=True)
+        #     updated_at = models.DateTimeField(auto_now=True)
+        #     is_available = models.BooleanField(default=True)
+        #     is_online = models.BooleanField(default=True)
+
+        key_set = {"brand__id":product_dataset["brand"]}
+        BrandBranchBasicInfo_q = db_operations_support.get_db_object_g_list(BrandBranchBasicInfo, key_set)
+
+        for e_BrandBranchBasicInfo in BrandBranchBasicInfo_q:
+
+            current_process_model = BranchServisableProduct
+
+            current_process_model_data = {}
+
+            current_process_model_data["product"] = product_id
+            current_process_model_data["branch"] = e_BrandBranchBasicInfo.id
+            current_process_model_data["price"] =product_dataset["price"]
+
+            proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        is_create_record = True
+
+        # create category
+        # create default category sub
+
+        Product_dataset = received_json_data["product_basic"]
+        current_process_model_data = Product_dataset
+        current_process_model = Product
+
+        if "id" in current_process_model_data:
+            is_create_record = False
+
+
+        branch_image_file = None
+
+        if "pic" in Product_dataset:
+            branch_image_file = "data:image/jpeg;base64,"+Product_dataset["pic"]
+            del Product_dataset["pic"]
+
+        # measurement_unit
+        # product_base
+
+        category_id = Product_dataset["category"]
+        del Product_dataset["category"]
+
+        key_set = {"name":"DEFAULT", "product_category__id":category_id}
+        ProductBase_q = db_operations_support.get_db_object_g_last(ProductBase, key_set)
+
+        current_process_model_data["product_base"] = ProductBase_q.id
+
+
+
+        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+
+        if proceed_current_process_model:
+            product_id = serializer_current_process_model["id"]
+
+            if branch_image_file is not None:
+                support_db.create_update_image(current_process_model, product_id, "pic", branch_image_file)
+
+            if is_create_record:
+                # proceed creating default product base
+                self.update_product_in_servisable_branches(product_id, current_process_model_data)
+
+                ProductBase_dataset = {}
+
+        base_data = {}
+        base_data["SUCCESS"] = False
+        base_data["RESPONSE_MESSAGE"] = "Details Updation Failed"
+
+        if proceed_current_process_model:
+            base_data["SUCCESS"] = True
+            base_data["RESPONSE_MESSAGE"] = "Details Updated Successfully"
+        else:
+            print("errorssdd")
+            print("serialisdfff=="+ str(serializer_current_process_model.errors))
+
+        return Response(base_data)
+
+class CreateProductCategory(APIView):
+
+
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        is_create_record = True
+
+
+
+
+        # create category
+        # create default category sub
+
+
+        ProductCategory_dataset = received_json_data["category_basic"]
+        current_process_model_data = ProductCategory_dataset
+        current_process_model = ProductCategory
+
+        if "id" in current_process_model_data:
+            is_create_record = False
+
+
+        branch_image_file = None
+        if "pic" in ProductCategory_dataset:
+            branch_image_file = "data:image/jpeg;base64,"+ProductCategory_dataset["pic"]
+            del ProductCategory_dataset["pic"]
+
+        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+
+        if proceed_current_process_model:
+            category_id = serializer_current_process_model["id"]
+
+            category_dataset = current_process_model_data
+
+            if branch_image_file is not None:
+                support_db.create_update_image(ProductCategory, category_id, "pic", branch_image_file)
+
+            if is_create_record:
+                # proceed creating default product base
+
+                ProductBase_dataset = {}
+                ProductBase_dataset["name"] = "DEFAULT"
+                ProductBase_dataset["sub_text"] = ""
+                ProductBase_dataset["description"] = ""
+                ProductBase_dataset["status_note"] = " Default product group created upon creating new Category"
+                ProductBase_dataset["product_category"] = category_id
+                ProductBase_dataset["has_view"] = False
+
+                proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                    ProductBase, ProductBase_dataset)
+
+                product_base_id = serializer_current_process_model["id"]
+
+                key_set = {"brand__id": current_process_model_data["brand"]}
+                BrandBranchBasicInfo_q = db_operations_support.get_db_object_g_list(BrandBranchBasicInfo, key_set)
+
+                for e_BrandBranchBasicInfo in BrandBranchBasicInfo_q:
+
+                    # create servisable category
+                    current_process_model = BranchServisableCategory
+
+                    current_process_model_data = {}
+
+                    current_process_model_data["product_category"] = category_id
+                    current_process_model_data["branch"] = e_BrandBranchBasicInfo.id
+                    proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                        current_process_model, current_process_model_data)
+
+                    # create servisable product base
+                    current_process_model = BranchServisableProductBase
+
+                    current_process_model_data = {}
+
+                    current_process_model_data["product_base"] = product_base_id
+                    current_process_model_data["branch"] = e_BrandBranchBasicInfo.id
+                    proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                        current_process_model, current_process_model_data)
+
+        base_data = {}
+        base_data["SUCCESS"] = False
+        base_data["RESPONSE_MESSAGE"] = "Details Updation Failed"
+
+        if proceed_current_process_model:
+            base_data["SUCCESS"] = True
+            base_data["RESPONSE_MESSAGE"] = "Details Updated Successfully"
+        else:
+            print("errorssdd")
+            print("serialisdfff=="+ str(serializer_current_process_model.errors))
+
+        return Response(base_data)
+
+class CreateBrandBranch(APIView):
+
+    def create_product_copy_on_branch(self, brand_id, branch_id):
+
+        # copy category
+        # copy category sub
+        # copy product list with active and available status
+
+        ProductCategory_q = ProductCategory.objects.filter(brand__id = brand_id)
+        proceed_current_process_model = False
+        serializer_current_process_model = {"test":"error"}
+
+        print(brand_id, branch_id)
+        for e_ProductCategory in ProductCategory_q:
+            print("eact cat")
+
+            BranchServisableCategory_data = {}
+            BranchServisableCategory_data["branch"] = branch_id
+            BranchServisableCategory_data["product_category"] = e_ProductCategory.id
+            # BranchServisableCategory_data["status"] =
+            BranchServisableCategory_data["is_available"] = e_ProductCategory.is_available
+            BranchServisableCategory_data["is_online"] = True
+
+            proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                BranchServisableCategory, BranchServisableCategory_data)
+
+            ProductBase_q = ProductBase.objects.filter(product_category__id = e_ProductCategory.id)
+
+            for e_ProductBase in ProductBase_q:
+                print("eact cat p base")
+                BranchServisableProductBase_data = {}
+
+                BranchServisableProductBase_data["product_base"] = e_ProductBase.id
+                BranchServisableProductBase_data["branch"] = branch_id
+                BranchServisableProductBase_data["is_available"] = e_ProductBase.is_available
+
+                proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                    BranchServisableProductBase, BranchServisableProductBase_data)
+                if proceed_current_process_model == False:
+                    break
+
+
+        if proceed_current_process_model:
+            Product_q = Product.objects.filter(product_base__product_category__brand__id = brand_id)
+            for e_Product in Product_q:
+                print("eact cat product")
+                BranchServisableProduct_data = {}
+                BranchServisableProduct_data["product"] = e_Product.id
+                BranchServisableProduct_data["branch"] = branch_id
+                BranchServisableProduct_data["is_available"] = e_Product.is_available
+                BranchServisableProduct_data["is_online"] = e_Product.is_available
+
+                proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                    BranchServisableProduct, BranchServisableProduct_data)
+
+        if proceed_current_process_model ==  False:
+            print(str(serializer_current_process_model))
+
+
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        BrandBranchBasicInfo_dataset = received_json_data["store_basic"]
+        current_process_model_data = BrandBranchBasicInfo_dataset
+        current_process_model = BrandBranchBasicInfo
+
+        branch_image_file = None
+        if "branch_image" in BrandBranchBasicInfo_dataset:
+            # branch_image_file = get_file_from_base64("data:image/jpeg;base64,"+BrandBranchBasicInfo_dataset["branch_image"])
+            branch_image_file = "data:image/jpeg;base64,"+BrandBranchBasicInfo_dataset["branch_image"]
+            del BrandBranchBasicInfo_dataset["branch_image"]
+
+        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+        if proceed_current_process_model:
+            brand_branch_id = serializer_current_process_model["id"]
+            brand_id = current_process_model_data["brand"]
+
+            if branch_image_file is not None:
+                # BrandBranchBasicInfo_q = BrandBranchBasicInfo.objects.get(id = brand_branch_id)
+                # BrandBranchBasicInfo_q.branch_base_image = branch_image_file
+                # support_db.create_update_image(PBS_ProductSampleModel, PBS_ProductSampleModel_slug, "image_1", image_1)
+                support_db.create_update_image(BrandBranchBasicInfo, brand_branch_id, "branch_base_image", branch_image_file)
+
+
+            ServisableDaysCriteria_dataset_arr = received_json_data["store_servisable_details"]
+            current_process_model = ServisableDaysCriteria
+            print("Send brand isssss")
+            print(brand_id)
+
+
+            self.create_product_copy_on_branch(brand_id, brand_branch_id)
+
+            for ServisableDaysCriteria_dataset in ServisableDaysCriteria_dataset_arr:
+                current_process_model_data = ServisableDaysCriteria_dataset
+                current_process_model_data["branch"] = brand_branch_id
+                if (current_process_model_data["service_start_time"] == 24):
+                    current_process_model_data["service_start_time"] = 0
+                # current_process_model_data["service_start_time"] = 5
+
+                if (current_process_model_data["service_end_time"] == 24):
+                    current_process_model_data["service_end_time"] = 0
+                # current_process_model_data["service_end_time"] = 15
+                print("creahh data")
+                print(current_process_model_data)
+                current_process_model_data["service_start_time"] = str(current_process_model_data["service_start_time"])+":00:00"
+                current_process_model_data["service_end_time"] = str(current_process_model_data["service_end_time"])+":00:00"
+                proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                    current_process_model, current_process_model_data)
+
+                if proceed_current_process_model == False:
+
+                    print("error tesfdsfsdf===================9890-098")
+                    print(current_process_model_data["id"])
+                    print(str(serializer_current_process_model.errors))
+
+
+            # ServisableDaysCriteria
+        # {"SUCCESS": False, "RESPONSE_DATA": base_data}
+        base_data = {}
+        base_data["SUCCESS"] = False
+        base_data["RESPONSE_MESSAGE"] = "Details Updation Failed"
+
+        if proceed_current_process_model:
+            base_data["SUCCESS"] = True
+            base_data["RESPONSE_MESSAGE"] = "Details Updated Successfully"
+        else:
+            print("errorssdd")
+            print("serialisdfff=="+ str(serializer_current_process_model.errors))
+
+        return Response(base_data)
+
+
+class CreateUpdateDataset(APIView):
+
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+
+        current_process_model_data = received_json_data["reference_dataset"]
+        current_process_model_name = received_json_data["reference_model"]
+        current_process_model = db_operations_support.get_model_class("GEN", current_process_model_name)
+
+        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+        if proceed_current_process_model:
+            brand_branch_id = serializer_current_process_model["id"]
+
+        base_data = {}
+        base_data["SUCCESS"] = False
+        base_data["RESPONSE_MESSAGE"] = "Details Updation Failed"
+
+        if proceed_current_process_model:
+            base_data["SUCCESS"] = True
+            base_data["RESPONSE_MESSAGE"] = "Details Updated Successfully"
+        else:
+            print("errorssdd")
+            print("serialisdfff=="+ str(serializer_current_process_model.errors))
+
+        return Response(base_data)
+
+
+
 
 class UpdateUserDetails(APIView):
 
@@ -1833,6 +2231,20 @@ class SymptomSet(APIView):
 #         content_type="application/json")
 #
 
+class StoreBranchListAdmin(APIView):
+
+    def post(self,request):
+        print(":cameggg");
+
+        category = BrandBranchBasicInfo.objects.all()
+        serializer_cat = BrandBranchBasicInfoSerializer(category, many=True)
+
+        base_data = {}
+        base_data["branchlist"] = serializer_cat.data
+
+        return Response(base_data)
+
+
 class StoreBranchList(APIView):
 
     def get(self,request):
@@ -1927,7 +2339,6 @@ class BranchProductListCustomer1(APIView):
         return Response(base_data)
 
 class BranchProductListCustomer(APIView):
-# class ProductList(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
@@ -1989,6 +2400,51 @@ class BranchProductListAdmin(APIView):
         category_servisable = BranchServisableCategory.objects.filter(branch__id = branch_id).values_list('product_category__id', flat=True)
         product_base_servisable = BranchServisableProductBase.objects.filter(branch__id = branch_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
         product_servisable = BranchServisableProduct.objects.filter(branch__id = branch_id, product__product_base__product_category__in=category_servisable).values_list('product__id', flat=True)
+
+        print("recc aa")
+        print(category_servisable)
+
+        category = ProductCategory.objects.filter(id__in=category_servisable)
+        # category_ids = ProductCategory.objects.filter(id__in=category_servisable).values_list('id', flat=True)
+        # category = ProductCategory.objects.filter(is_available=True)
+        serializer_cat = ProductCategorySerializer(category, many=True)
+
+        product = Product.objects.filter(id__in = product_servisable).order_by('-priority')
+
+        # user = UserProfileInfo.objects.get(phone_primary=phone)
+
+        serializer_pro = ProductSerializer(product, context={"language":"en"},   many=True)
+
+        product_base = ProductBase.objects.filter(id__in = product_base_servisable)
+        serializer_pro_base = ProductBaseSerializer(product_base, many=True)
+
+        itemMeasuementUnit_base = ItemMeasuementUnit.objects.filter(is_available=True)
+        serialiser_itemMeasuementUnit_base = ItemMeasuementUnitSerializer(itemMeasuementUnit_base, many=True)
+
+        base_data = {}
+
+        base_data["uom"] = serialiser_itemMeasuementUnit_base.data
+        base_data["category"] = serializer_cat.data
+        base_data["product"] = serializer_pro.data
+        base_data["product_base"] = serializer_pro_base.data
+
+        return Response(base_data)
+
+class BrandProductListAdmin(APIView):
+
+    def post(self,request):
+        received_json_data = json.loads(request.body)
+        #
+        brand_id = received_json_data["brand_id"]
+        print(":cameggg");
+
+        print(received_json_data);
+        # branch_id = "1"
+
+
+        category_servisable = BranchServisableCategory.objects.filter(branch__brand__id = brand_id).values_list('product_category__id', flat=True)
+        product_base_servisable = BranchServisableProductBase.objects.filter(branch__brand__id = brand_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
+        product_servisable = BranchServisableProduct.objects.filter(branch__brand__id = brand_id, product__product_base__product_category__in=category_servisable).values_list('product__id', flat=True)
 
         print("recc aa")
         print(category_servisable)
@@ -2107,6 +2563,66 @@ class BranchProductListServisableCategorySpecificDisabled(APIView):
 
         return Response(base_data)
 
+
+class StoreCategoryListAd(APIView):
+
+    def post(self,request):
+
+        received_json_data = json.loads(request.body)
+
+        print("recc sss")
+        print(received_json_data)
+        #
+        brand_id = received_json_data["brand_id"]
+        # branch_id = received_json_data["branch_id"]
+        # print(":cameggg");
+
+        # print(received_json_data);
+        # branch_id = "1"
+
+
+        category_servisable = ProductCategory.objects.filter(brand__id = brand_id)
+
+        serializer_cat = ProductCategorySerializerAd(category_servisable, many=True)
+
+        base_data = {}
+
+        base_data["categorylist"] = serializer_cat.data
+
+        print("ressponsee ddd")
+        print(base_data)
+
+        return Response(base_data)
+
+class StoreUomList(APIView):
+
+    def post(self,request):
+
+        received_json_data = json.loads(request.body)
+
+        print("recc sss")
+        print(received_json_data)
+        #
+        brand_id = received_json_data["brand_id"]
+        # branch_id = received_json_data["branch_id"]
+        # print(":cameggg");
+
+        # print(received_json_data);
+        # branch_id = "1"
+
+
+        category_servisable = ItemMeasuementUnit.objects.filter(brand__id = brand_id)
+
+        serializer_uom = StoreUomSerializer(category_servisable, many=True)
+
+        base_data = {}
+
+        base_data["uom_list"] = serializer_uom.data
+
+        print("ressponsee ddd")
+        print(base_data)
+
+        return Response(base_data)
 
 class StoreCategoryList(APIView):
 

@@ -142,7 +142,7 @@ def create_update_image(model, id, column_key, image_b64):
     format, imgstr = image_b64.split(';base64,')
     ext = format.split('/')[-1]
 
-    image_file = ContentFile(base64.b64decode(imgstr), name=id+'__'+column_key+'_bi.' + ext)
+    image_file = ContentFile(base64.b64decode(imgstr), name=str(id)+'__'+column_key+'_bi.' + ext)
 
     key_set = {"id":id}
     material_q = db_operations_support.get_db_object_g(model, key_set)

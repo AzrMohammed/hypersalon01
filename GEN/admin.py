@@ -2,12 +2,14 @@ from django.contrib import admin
 # from GEN.models import CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, EPS_EnterpriseMetaModel, EPS_EnterpriseProfileModel
 from GEN.models import UserProfileInfo, ItemMeasuementUnit, Order, ProductCategory, ProductBase, Product, OrderItem, \
     OrderLog, OrderItemLog, C19SymptomSet, UserLocationLog, UserHealthProfile, OrderStatus, BrandBranchBasicInfo, \
-    BranchServisableProduct, BranchServisableProductBase, BranchServisableCategory, AppUserType, BrandBasicInfo
+    BranchServisableProduct, BranchServisableProductBase, BranchServisableCategory, AppUserType, BrandBasicInfo, \
+    ServisableDaysCriteria
 
 # Register your models here.
 
 
 admin.site.register(BrandBasicInfo)
+admin.site.register(ServisableDaysCriteria)
 admin.site.register(UserProfileInfo)
 admin.site.register(AppUserType)
 admin.site.register(BrandBranchBasicInfo)

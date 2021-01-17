@@ -1,20 +1,18 @@
+import inspect
+import os
+import sys
+
+from django.contrib.auth.models import User
 from django.db import models
-from django.contrib.auth.models import User
 from django.template.defaultfilters import slugify
-from GEN import GEN_Constants, GEN_Constants_model
-from django.contrib.auth.models import AbstractUser
+
+from GEN import GEN_Constants
+
 # from django.contrib.postgres.fields import ArrayField
-
-from django.contrib.auth.models import User
-from django.template.defaultfilters import slugify
-
-import os,sys,inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir)
 from GEN import dbconstants
-from django.contrib.auth.models import AbstractUser
-
 
 import element_types
 
@@ -94,14 +92,20 @@ class BrandBasicInfo(models.Model):
     location_latitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     location_langitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     status = models.CharField(max_length=2, choices=dbconstants.STATUS,  default=dbconstants.STATUS_ACTIVE)
+    # capacity = models.CharField(max_length=2, choices=dbconstants.STATUS,  default=dbconstants.STATUS_ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_available = models.BooleanField(default=True)
     is_online = models.BooleanField(default=True)
 
     def __str__(self):
-        return str(self.name)
+        return str(self.name) +" | " + str(self.id)
 
+
+class ServisableStoreCapacityCriteria(models.Model):
+    # brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True)
+    # brand_branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE, null=True)
+    store_capacity = models.IntegerField(default=111453)
 
 class BrandBranchBasicInfo(models.Model):
     brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True)
@@ -109,7 +113,8 @@ class BrandBranchBasicInfo(models.Model):
     description = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
     address_text = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
     branch_base_image = models.ImageField(upload_to='branch_images', blank=True)
-    # user = models.OneToOneField(UserProfileInfo, on_delete=models.CASCADE)
+    # capacity_criteria = models.OneToOneField(ServisableStoreCapacityCriteria, on_delete=models.CASCADE)
+    store_capacity = models.IntegerField(default=111453)
     location_latitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     location_langitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     status = models.CharField(max_length=2, choices=dbconstants.STATUS,  default=dbconstants.STATUS_ACTIVE)
@@ -119,20 +124,21 @@ class BrandBranchBasicInfo(models.Model):
     is_online = models.BooleanField(default=True)
 
     def __str__(self):
-        return str(self.name)
+        return str(self.name) + " | " + str(self.id)
+
 
 class ServisableDaysCriteria(models.Model):
     brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
     branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
-    service_start_time = models.DateTimeField(blank=True, null=True)
-    service_end_time = models.DateTimeField(blank=True, null=True)
+    service_start_time = models.TimeField(blank=True, null=True)
+    service_end_time = models.TimeField(blank=True, null=True)
     day_of_week = models.IntegerField(choices=dbconstants.DAY_OF_WEEK_LIST,  default=dbconstants.DAY_NONE)
+    is_available = models.BooleanField(default=True)
+    is_online = models.BooleanField(default=True)
 
 class BrandBranchServisableCriteria(models.Model):
     brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
     branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
-
-
 
 
 class C19SymptomSet(models.Model):
@@ -169,6 +175,7 @@ class UserHealthProfile(models.Model):
 
 class ItemMeasuementUnit(models.Model):
 
+    brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
     # slug = models.SlugField(unique=True, max_length=8)
     name = models.CharField(max_length=50, default=dbconstants.VAL_STR_DEFAULT, null=True)
     note = models.CharField(max_length=250)
@@ -176,7 +183,6 @@ class ItemMeasuementUnit(models.Model):
     # created_at = models.DateTimeField(auto_now_add=True)
     # updated_at = models.DateTimeField(auto_now=True)
     is_available = models.BooleanField(default=True)
-
 
     def __str__(self):
         return str(self.name)
@@ -223,7 +229,6 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-
     def __str__(self):
         return str(self.order_id)
 
@@ -238,6 +243,7 @@ class ProductCategory(models.Model):
     status_note = models.CharField(max_length=200, unique=False)
     is_available = models.BooleanField(default=True)
     slug = models.SlugField(null=True)
+    has_view = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
@@ -256,6 +262,7 @@ class ProductBase(models.Model):
     description = models.TextField(null=True, blank=True)
     status_note = models.CharField(max_length=200, unique=False)
     is_available = models.BooleanField(default=True)
+    has_view = models.BooleanField(default=True)
     product_category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE)
     slug = models.SlugField(null=True)
 
@@ -286,6 +293,7 @@ class Product(models.Model):
     product_base = models.ForeignKey(ProductBase, on_delete=models.CASCADE, unique=False, blank=True)
     measurement_unit = models.ManyToManyField(ItemMeasuementUnit,  related_name='mrp_umo', blank=True)
     slug = models.SlugField(null=True)
+    has_view = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from GEN import dbconstants, GEN_Constants
 from .models import UserProfileInfo, CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, ProductCategory, \
     Product, ProductBase, ItemMeasuementUnit, OrderItem, C19SymptomSet, UserHealthProfile, Order, BrandBranchBasicInfo, \
-    BranchServisableCategory, BranchServisableProductBase, BranchServisableProduct
+    BranchServisableCategory, BranchServisableProductBase, BranchServisableProduct, ServisableDaysCriteria
 
 
 class ProductSuggestionListSerializer(serializers.ModelSerializer):
@@ -232,6 +232,30 @@ class OrderDetail01Serializer(serializers.ModelSerializer):
         order_items_s = OrderItemSerializer(order_items, many=True).data
         return order_items_s
 
+class ServisableDaysCriteriaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ServisableDaysCriteria
+        fields = ['id', 'brand', 'branch', 'service_start_time', 'service_end_time', 'day_of_week', 'is_available', 'is_online']
+
+
+class BranchDetailAdminSerializer(serializers.ModelSerializer):
+
+    servisable_days_criteria = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BrandBranchBasicInfo
+        fields = ['id', 'brand', 'name', 'description', 'address_text', 'branch_base_image', 'store_capacity', 'location_latitude', 'location_langitude', 'status', 'is_available', 'is_online', 'servisable_days_criteria']
+
+    def get_brand(self, obj):
+        return obj.brand.id
+
+    def get_servisable_days_criteria(self, obj):
+        ServisableDaysCriteria_q = ServisableDaysCriteria.objects.filter(branch__id = obj.id)
+        ServisableDaysCriteria_data = ServisableDaysCriteriaSerializer(ServisableDaysCriteria_q, many=True).data
+        return ServisableDaysCriteria_data
+
+
 class BranchOrderListSerializer(serializers.ModelSerializer):
     order_item = serializers.SerializerMethodField()
     delivery_status = serializers.SerializerMethodField()
@@ -309,6 +333,28 @@ class ProductCategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'pic', 'name', 'name_tamil', 'sub_text', 'description', 'status_note']
         depth = 0
 
+class ProductCategorySerializerAd(serializers.ModelSerializer):
+
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductCategory
+        fields = ['id', 'pic', 'name', 'sub_text', 'description',  'is_available']
+
+    def get_name(self, obj):
+        return obj.name
+
+class StoreUomSerializer(serializers.ModelSerializer):
+
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ItemMeasuementUnit
+        fields = ['id', 'name', 'brand', 'note',  'is_available']
+
+    def get_name(self, obj):
+        return obj.name
+
 class ProductCategorySerializerBranchUser(serializers.ModelSerializer):
 
     name = serializers.SerializerMethodField()
@@ -319,7 +365,7 @@ class ProductCategorySerializerBranchUser(serializers.ModelSerializer):
 
     class Meta:
         model = BranchServisableCategory
-        fields = ['id', 'category_id','pic', 'name', 'sub_text', 'description',  'is_available']
+        fields = ['id', 'category_id', 'pic', 'name', 'sub_text', 'description',  'is_available']
 
     def get_name(self, obj):
         return obj.product_category.name
@@ -351,12 +397,16 @@ class ProductBaseSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
 
     name = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'pic', 'name', 'name_tamil', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'slug', 'priority', 'product_base', 'measurement_unit']
+        fields = ['id', 'pic', 'category', 'name', 'name_tamil', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'slug', 'priority', 'product_base', 'measurement_unit', 'is_available']
         # fields = '__all__'
         depth = 0
+
+    def get_category(self, obj):
+        return obj.product_base.product_category.id
 
     def get_name(self, obj):
         # if self.context["language"] == "ta":

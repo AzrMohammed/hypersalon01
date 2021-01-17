@@ -482,4 +482,6 @@ CUSDAT_TYPE_TEXT_COLOR = "TEXT_COLOR"
 CUSDAT_TYPE_STATUS_PERCENT_RAW = "STATUS_PERCENT_RAW"
 # data = {"pc":[{"t":"STATUS_PERCENT_RAW","v":color_percent}], "dt":str(color_percent)}
 CUSDAT_TYPE_IMG_THUMB = "IMG_THUMB"
+
+STORE_CAPCITY_DEF = 111453
 # data = {"pc":[{"t":"CUSDAT_TYPE_IMG_THUMB","v":<url>}], "dt":<product_name>}
