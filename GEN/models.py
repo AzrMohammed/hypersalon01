@@ -70,8 +70,8 @@ class UserProfileInfo(models.Model):
 
 
 class UserLocationLog(models.Model):
-
     user = models.OneToOneField(UserProfileInfo, on_delete=models.CASCADE)
+    landmark_place_google_id = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
     location_latitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     location_langitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     status = models.CharField(max_length=2, choices=dbconstants.STATUS,  default=dbconstants.STATUS_ACTIVE)
@@ -105,16 +105,21 @@ class BrandBasicInfo(models.Model):
 class ServisableStoreCapacityCriteria(models.Model):
     # brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True)
     # brand_branch = models.ForeignKey(BrandBranchBasicInfo, on_delete=models.CASCADE, null=True)
-    store_capacity = models.IntegerField(default=111453)
+    store_capacity = models.IntegerField(default=GEN_Constants.STORE_CAPCITY_DEF)
 
 class BrandBranchBasicInfo(models.Model):
     brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=250, default=dbconstants.VAL_STR_DEFAULT, null=True)
     description = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
+    phone_primary = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
+    phone_secondary = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
     address_text = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
+    g_address_dump = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
+    place_google_id = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
+    landmark_place_google_id = models.TextField(default=dbconstants.VAL_STR_DEFAULT, null=True, blank=True)
     branch_base_image = models.ImageField(upload_to='branch_images', blank=True)
     # capacity_criteria = models.OneToOneField(ServisableStoreCapacityCriteria, on_delete=models.CASCADE)
-    store_capacity = models.IntegerField(default=111453)
+    store_capacity = models.IntegerField(default=GEN_Constants.STORE_CAPCITY_DEF)
     location_latitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     location_langitude = models.CharField(max_length=30, unique=False, default=dbconstants.VAL_STR_DEFAULT)
     status = models.CharField(max_length=2, choices=dbconstants.STATUS,  default=dbconstants.STATUS_ACTIVE)
@@ -135,6 +140,8 @@ class ServisableDaysCriteria(models.Model):
     day_of_week = models.IntegerField(choices=dbconstants.DAY_OF_WEEK_LIST,  default=dbconstants.DAY_NONE)
     is_available = models.BooleanField(default=True)
     is_online = models.BooleanField(default=True)
+    def __str__(self):
+        return str(self.branch.id) + " | " + str(self.day_of_week) + " | " + str(self.id)
 
 class BrandBranchServisableCriteria(models.Model):
     brand = models.ForeignKey(BrandBasicInfo, on_delete=models.CASCADE, null=True, blank=True)
@@ -225,6 +232,8 @@ class Order(models.Model):
     # user_delivery_agent = models.ForeignKey(UserProfileInfo, limit_choices_to={'user_type': dbconstants.USER_TYPE_DELIVERY_AGENT},  related_name='user_delivery_agent', on_delete=models.CASCADE)
     delivery_charges = models.FloatField(max_length=5, default=1.0)
     status_note = models.CharField(max_length=200, default=dbconstants.VAL_STR_DEFAULT, null=True)
+    order_accepted = models.BooleanField(default=False)
+    order_rejected = models.BooleanField(default=False)
     # status = models.CharField(max_length=3, choices=dbconstants.ORDER_STATUS,  default=dbconstants.ORDER_PLACED)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

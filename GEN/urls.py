@@ -46,8 +46,12 @@ path('BrandProductListAdmin/', views.BrandProductListAdmin.as_view(), name = "Br
 path('BranchProductListServisableCategorySpecific/', views.BranchProductListServisableCategorySpecific.as_view(), name = "BranchProductListServisableCategorySpecific"),
 path('BranchProductListServisableCategorySpecificDisabled/', views.BranchProductListServisableCategorySpecificDisabled.as_view(), name = "BranchProductListServisableCategorySpecificDisabled"),
 path('BranchProductListCustomer/', views.BranchProductListCustomer.as_view(), name = "BranchProductListCustomer"),
+path('BranchProductListAdmin2/', views.BranchProductListAdmin2.as_view(), name = "BranchProductListAdmin2"),
+path('BranchProductSupportDataCustomer/', views.BranchProductSupportDataCustomer.as_view(), name = "BranchProductSupportDataCustomer"),
+
 path('SymptomSet/', views.SymptomSet.as_view(), name = "SymptomSet"),
 path('CustomerOrder/', views.CustomerOrder.as_view(), name = "CustomerOrder"),
+path('AgentDetail_AD/', views.AgentDetail_AD.as_view(), name = "AgentDetail_AD"),
 path('CustomerOrderUpcoming/', views.CustomerOrderUpcoming.as_view(), name = "CustomerOrderUpcoming"),
 path('CustomerOrderOthers/', views.CustomerOrderOthers.as_view(), name = "CustomerOrderOthers"),
 path('OrderAcceptedByAgent/', views.OrderAcceptedByAgent.as_view(), name = "OrderAcceptedByAgent"),
@@ -68,7 +72,7 @@ path('alter_order_item/', views.alter_order_item, name = "alter_order_item"),
 path('alter_order/', views.alter_order_item, name = "alter_order"),
 path('order_details/', views.order_details, name = "order_details"),
 path('order_list_user/', views.order_list_user, name = "order_list_user"),
-path('order_create_m/', views.order_create_m, name = "order_create_m"),
+path('order_create_m/', views.CreateOrder.as_view(), name = "order_create_m"),
 
 path('customer_heatmap/', views.customer_heatmap, name = "customer_heatmap"),
 

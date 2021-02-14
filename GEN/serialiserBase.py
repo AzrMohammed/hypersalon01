@@ -106,10 +106,13 @@ class CustomerAllOrderSerializer(serializers.ModelSerializer):
     branch_long = serializers.SerializerMethodField()
     branch_name = serializers.SerializerMethodField()
     branch_address = serializers.SerializerMethodField()
+    g_map_query = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    phone_secondary = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['id', 'order_id', 'delivery_charges', 'schedule_requested_time', 'checked_in_time', 'order_status', 'order_item', 'status_title', 'status_text', 'branch_address', 'branch_name', 'branch_lat', 'branch_long']
+        fields = ['id', 'g_map_query', 'phone', 'phone_secondary', 'order_id', 'delivery_charges', 'schedule_requested_time', 'checked_in_time', 'order_status', 'order_item', 'status_title', 'status_text', 'branch_address', 'branch_name', 'branch_lat', 'branch_long']
 
 
     def get_branch_name(self, obj):
@@ -123,6 +126,16 @@ class CustomerAllOrderSerializer(serializers.ModelSerializer):
 
     def get_branch_long(self, obj):
         return obj.branch.location_langitude
+
+    def get_g_map_query(self, obj):
+        return "geo:0,0?q="+obj.branch.g_address_dump
+        # return "geo:0,0?q=Naturals Salon and Spa, Landons Road, Kilpauk, Chennai, Tamil Nadu, India"
+
+    def get_phone(self, obj):
+        return obj.branch.phone_primary
+
+    def get_phone_secondary(self, obj):
+        return obj.branch.phone_secondary
 
     def get_status_title(self, obj):
 
@@ -245,7 +258,7 @@ class BranchDetailAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BrandBranchBasicInfo
-        fields = ['id', 'brand', 'name', 'description', 'address_text', 'branch_base_image', 'store_capacity', 'location_latitude', 'location_langitude', 'status', 'is_available', 'is_online', 'servisable_days_criteria']
+        fields = ['id', 'brand', 'name', 'phone_primary', 'phone_secondary', 'g_address_dump', 'place_google_id', 'description', 'address_text', 'branch_base_image', 'store_capacity', 'location_latitude', 'location_langitude', 'status', 'is_available', 'is_online', 'servisable_days_criteria']
 
     def get_brand(self, obj):
         return obj.brand.id
@@ -316,16 +329,38 @@ class ItemMeasuementUnitSerializer(serializers.ModelSerializer):
         depth = 0
 
 
-class BrandBranchBasicInfoSerializer(serializers.ModelSerializer):
+class BrandBranchBasicInfoSerializerAD(serializers.ModelSerializer):
+
     phone = serializers.SerializerMethodField()
+
     class Meta:
         model = BrandBranchBasicInfo
-        fields = ['id', 'name', 'description', 'address_text', 'branch_base_image', 'status', 'is_available', 'is_online', 'location_latitude', 'location_langitude' , 'phone']
+        fields = ['id', 'name', 'description', 'address_text', 'branch_base_image', 'status', 'is_available', 'is_online', 'location_latitude', 'location_langitude' , 'phone', 'place_google_id', 'landmark_place_google_id', 'store_capacity']
         depth = 0
 
     def get_phone(self, obj):
         return "9999999999"
 
+
+class BrandBranchBasicInfoSerializer(serializers.ModelSerializer):
+    phone = serializers.SerializerMethodField()
+    phone_secondary = serializers.SerializerMethodField()
+    g_map_query = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BrandBranchBasicInfo
+        fields = ['id', 'name', 'place_google_id', "g_map_query", 'description', 'address_text', 'branch_base_image', 'status', 'is_available', 'is_online', 'location_latitude', 'location_langitude' , 'phone', 'phone_secondary']
+        depth = 0
+
+    def get_g_map_query(self, obj):
+        return "geo:0,0?q="+obj.g_address_dump
+        # return "geo:0,0?q=Naturals Salon and Spa, Landons Road, Kilpauk, Chennai, Tamil Nadu, India"
+
+    def get_phone(self, obj):
+        return obj.phone_primary
+
+    def get_phone_secondary(self, obj):
+        return obj.phone_secondary
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -374,7 +409,8 @@ class ProductCategorySerializerBranchUser(serializers.ModelSerializer):
         return obj.product_category.id
 
     def get_pic(self, obj):
-        if obj.product_category is not None:
+        # if obj.product_category is not None:
+        if obj.product_category.pic and hasattr(obj.product_category.pic, 'url'):
             return obj.product_category.pic.url
         else:
             return None
@@ -393,6 +429,100 @@ class ProductBaseSerializer(serializers.ModelSerializer):
         depth = 0
 
 
+
+class BranchServisableProductSerializerAd(serializers.ModelSerializer):
+
+    product_id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    pic = serializers.SerializerMethodField()
+    sub_text = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    base_measurement_unit = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
+    show_price = serializers.SerializerMethodField()
+    status_note = serializers.SerializerMethodField()
+    product_base = serializers.SerializerMethodField()
+    measurement_unit = serializers.SerializerMethodField()
+
+
+
+    class Meta:
+        model = BranchServisableProduct
+        fields = ['id', 'product_id', 'category', 'name', 'pic', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'product_base', 'measurement_unit', 'is_available', 'is_online']
+
+
+    def get_measurement_unit(self, obj):
+        m_units = []
+        for e_m_unit in obj.product.measurement_unit.all():
+            m_units.append(e_m_unit.id)
+        return m_units
+
+        # return obj.product.measurement_unit
+        # return[]
+
+    def get_product_base(self, obj):
+        return obj.product.product_base.id
+
+    def get_status_note(self, obj):
+        return obj.product.status_note
+
+    def get_show_price(self, obj):
+        return obj.product.show_price
+
+    def get_base_measurement_unit(self, obj):
+        return obj.product.base_measurement_unit.id
+
+    def get_description(self, obj):
+        return obj.product.description
+
+    def get_sub_text(self, obj):
+        return obj.product.sub_text
+
+    def get_pic(self, obj):
+        # if obj.product.pic is not None:
+        if obj.product.pic and hasattr(obj.product.pic, 'url'):
+            return str(obj.product.pic.url)
+        else:
+            return None
+
+    def get_product_id(self, obj):
+        return obj.product.id
+
+    def get_category(self, obj):
+        return obj.product.product_base.product_category.id
+
+    def get_name(self, obj):
+        return str(obj.product.name)
+
+
+class ProductADFeedSerializer(serializers.ModelSerializer):
+
+    name = serializers.SerializerMethodField()
+    product_id = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ['id', "product_id", 'pic', 'category', 'name', 'name_tamil', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'slug', 'priority', 'product_base', 'measurement_unit', 'is_available']
+        # fields = '__all__'
+        depth = 0
+
+    def get_product_id(self, obj):
+        return obj.id
+
+    def get_category(self, obj):
+        return obj.product_base.product_category.id
+
+    def get_name(self, obj):
+        # if self.context["language"] == "ta":
+        #     return str(obj.name_tamil)
+        # else:
+        return str(obj.name)
+    def get_pic(self,obj):
+        if obj.product.pic and hasattr(obj.product.pic,'url'):
+            return obj.product.pic.url
+        else:
+            return None
 
 class ProductSerializer(serializers.ModelSerializer):
 
@@ -413,6 +543,14 @@ class ProductSerializer(serializers.ModelSerializer):
         #     return str(obj.name_tamil)
         # else:
         return str(obj.name)
+    def get_pic(self,obj):
+        if obj.product.pic and hasattr(obj.product.pic,'url'):
+            return obj.product.pic.url
+        else:
+            return None
+
+
+
 
 class ServisableProductSerializerCustomer(serializers.ModelSerializer):
 
@@ -461,7 +599,79 @@ class ServisableProductSerializerCustomer(serializers.ModelSerializer):
         return str(obj.product.priority)
 
     def get_pic(self, obj):
-        if obj.product.pic is not None:
+        # if obj.product.pic is not None:
+        if obj.product.pic and hasattr(obj.product.pic, 'url'):
+            return str(obj.product.pic.url)
+        else:
+            return None
+
+    def get_sub_text(self, obj):
+        return str(obj.product.sub_text)
+
+    def get_description(self, obj):
+        return str(obj.product.description)
+
+    def get_base_measurement_unit(self, obj):
+        return str(obj.product.base_measurement_unit.id)
+
+    def get_price(self, obj):
+        return str(obj.product.price)
+
+    def get_show_price(self, obj):
+        return str(obj.product.show_price)
+
+    def get_product_base(self, obj):
+        return str(obj.product.id)
+
+class ServisableProductSerializerCustomer(serializers.ModelSerializer):
+
+    name = serializers.SerializerMethodField()
+    show_price = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    base_measurement_unit = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    sub_text = serializers.SerializerMethodField()
+    pic = serializers.SerializerMethodField()
+    priority = serializers.SerializerMethodField()
+    measurement_unit = serializers.SerializerMethodField()
+    product_base = serializers.SerializerMethodField()
+    slug = serializers.SerializerMethodField()
+    is_available = serializers.SerializerMethodField()
+    status_note = serializers.SerializerMethodField()
+    product_id = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = BranchServisableProduct
+        fields = ['id', 'product_id', "slug", "is_available", 'pic', 'name', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'slug', 'priority', 'product_base', 'measurement_unit']
+
+    def get_product_id(self, obj):
+        return obj.product.id
+
+    def get_is_available(self, obj):
+        return obj.is_available
+
+    def get_name(self, obj):
+        return str(obj.product.name)
+
+    def get_slug(self, obj):
+        return str(obj.product.slug)
+
+    def get_status_note(self, obj):
+        return str(obj.product.status_note)
+
+    def get_measurement_unit(self, obj):
+        m_units = []
+        for e_m_unit in obj.product.measurement_unit.all():
+            m_units.append(e_m_unit.id)
+        return m_units
+
+    def get_priority(self, obj):
+        return str(obj.product.priority)
+
+    def get_pic(self, obj):
+        # if obj.product.pic is not None:
+        if obj.product.pic and hasattr(obj.product.pic, 'url'):
             return str(obj.product.pic.url)
         else:
             return None
@@ -525,7 +735,8 @@ class ServisableProductSerializerBranchUser(serializers.ModelSerializer):
         return str(obj.product.priority)
 
     def get_pic(self, obj):
-        if obj.product.pic is not None:
+        # if obj.product.pic is not None:
+        if obj.product.pic and hasattr(obj.product.pic, 'url'):
             return str(obj.product.pic.url)
         else:
             return None
@@ -540,7 +751,7 @@ class ServisableProductSerializerBranchUser(serializers.ModelSerializer):
         return str(obj.product.base_measurement_unit)
 
     def get_price(self, obj):
-        return str(obj.product.price)
+        return str(obj.price)
 
     def get_show_price(self, obj):
         return str(obj.product.show_price)
@@ -559,6 +770,15 @@ class BranchAgentListSerializer(serializers.ModelSerializer):
     def get_first_name(self, obj):
         return obj.user.first_name
 
+
+class BranchAgentDetailSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    class Meta:
+        model = UserProfileInfo
+        fields = ('id', 'name', 'app_user_name', 'gender', 'phone_primary', 'location_city', 'location_pincode', 'is_active')
+
+    def get_name(self, obj):
+        return obj.user.first_name
 
 
 

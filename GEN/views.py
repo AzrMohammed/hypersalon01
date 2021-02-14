@@ -33,7 +33,9 @@ from .serialiserBase import EnterPriseForm, \
     ProductSuggestionListSerializer, \
     BrandBranchBasicInfoSerializer, BranchAgentListSerializer, BranchOrderListSerializer, OrderDetail01Serializer, \
     ProductCategorySerializerBranchUser, ServisableProductSerializerBranchUser, ServisableProductSerializerCustomer, \
-    CustomerAllOrderSerializer, BranchDetailAdminSerializer, ProductCategorySerializerAd, StoreUomSerializer
+    CustomerAllOrderSerializer, BranchDetailAdminSerializer, ProductCategorySerializerAd, StoreUomSerializer, \
+    BrandBranchBasicInfoSerializerAD, BranchAgentDetailSerializer, BranchServisableProductSerializerAd, \
+    ProductADFeedSerializer
 
 import base64
 from django.core.files.base import ContentFile
@@ -102,8 +104,8 @@ class BrandBranchOrdersPendingApproval(APIView):
         # order_list = Order.objects.filter(brand__id = brand_id, branch = brandbranch_id).order_by('-updated_at')
 
         order_list = Order.objects.filter(brand__id = brand_id, branch = brandbranch_id, order_status__code = GEN_Constants.ORDER_STATUS_INITIATED)
-
-        order_list.filter()
+        # order_list = Order.objects.filter(brand__id = brand_id, branch = brandbranch_id)
+        # order_list.filter()
 
         order_list = order_list.order_by('-updated_at')
 
@@ -113,6 +115,9 @@ class BrandBranchOrdersPendingApproval(APIView):
         base_data["order"] = order_list_s.data
         base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
         base_data["status_text"] = "RECEIVED"
+
+        print("respisfssssssssssssss")
+        print(base_data)
 
         return Response(base_data)
 
@@ -495,6 +500,12 @@ class CreateBrandBranch(APIView):
         print(received_json_data)
 
         BrandBranchBasicInfo_dataset = received_json_data["store_basic"]
+
+        is_create = True
+
+        if "id" in BrandBranchBasicInfo_dataset:
+            is_create = False
+
         current_process_model_data = BrandBranchBasicInfo_dataset
         current_process_model = BrandBranchBasicInfo
 
@@ -517,13 +528,14 @@ class CreateBrandBranch(APIView):
                 support_db.create_update_image(BrandBranchBasicInfo, brand_branch_id, "branch_base_image", branch_image_file)
 
 
+
             ServisableDaysCriteria_dataset_arr = received_json_data["store_servisable_details"]
             current_process_model = ServisableDaysCriteria
             print("Send brand isssss")
             print(brand_id)
 
-
-            self.create_product_copy_on_branch(brand_id, brand_branch_id)
+            if is_create:
+                self.create_product_copy_on_branch(brand_id, brand_branch_id)
 
             for ServisableDaysCriteria_dataset in ServisableDaysCriteria_dataset_arr:
                 current_process_model_data = ServisableDaysCriteria_dataset
@@ -761,11 +773,13 @@ class SamplePush(APIView):
         f =  FCMDevice()
 
         f.name = "Test"
-        f.registration_id = "ej0k9aBjSuykQbgfHpn_8C:APA91bErxfjuho4iobx6nRPfVzP_5gs-6Gv0nnwd1yYo6awnkwGsaNLvGPCfqCJyJ2Frgq2I8fRvSm2zLecq0jjsfd3jb9v0pTbtPxHkcYg-aQorSq-FQT6TUsF-I_IBasajVT2mDAt-"
+        f.registration_id = "cIDDhkvAQyea-Vhluvlo8s:APA91bGdIDibu4SNxrFu_XKffv4VjDUf_eyUTsz_AC-4w6T3uEn4_s3biuUUfUYzzvYtlCX04INAb4oHRscxX1iM4S3fVj2qMmecW54b5sOL86lt9sfsm-ppd5CohrazrFUaEcGJLr27"
         f.active = True
         f.type = "android"
 
         # f.send_message("Title", "test message for impl")
+
+        # customer
         message = "Json has semt a new schedule Request"
         data = {
                     "app_user_type" :GEN_Constants.APP_USER_TYPE_CUSTOMER,
@@ -773,9 +787,17 @@ class SamplePush(APIView):
                     "order_id":10
                     }
 
+        # agent
+        data = {
+            "app_user_type": GEN_Constants.APP_USER_TYPE_BRANCH_AGENT,
+            "push_type": "SCHEDULE_REQUEST",
+            "order_id": 27
+        }
+
         # data = {app_user_type=USR_BAGENT, push_type=SCHEDULE_REQUEST, order_id=5}
 
-        proceedPush(GEN_Constants.APP_USER_TYPE_CUSTOMER, f.registration_id, "Sample Title", message, data)
+
+        proceedPush(GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, f.registration_id, "Sample Title", message, data)
         # update_order_request_to_branch_user(9)
         return Response({"ressa":True})
 
@@ -945,6 +967,28 @@ class CustomerOrder(APIView):
 
         return Response(base_data)
 
+
+class AgentDetail_AD(APIView):
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        id = received_json_data["id"]
+        user_p = UserProfileInfo.objects.get(id=id)
+
+        user_p_s = BranchAgentDetailSerializer(user_p, many=False)
+
+
+        base_data = {}
+        base_data["agent_details"] = user_p_s.data
+        # base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
+        # base_data["status_text"] = "RECEIVED"
+
+        return Response(base_data)
+
 class CustomerOrderUpcoming(APIView):
 
     def post(self,request):
@@ -958,7 +1002,9 @@ class CustomerOrderUpcoming(APIView):
 
 
 
-        order_list = Order.objects.filter(user_customer = user_p, order_status__code = GEN_Constants.ORDER_STATUS_AGENT_APPROVED).order_by('schedule_requested_time')
+        # order_list = Order.objects.filter(user_customer = user_p, order_status__code = GEN_Constants.ORDER_STATUS_AGENT_APPROVED).order_by('schedule_requested_time')
+        order_list = Order.objects.filter(schedule_requested_time__gte = datetime.datetime.now()).order_by(
+            'schedule_requested_time')
         order_list_s = CustomerAllOrderSerializer(order_list, many=True)
 
 
@@ -979,7 +1025,10 @@ class CustomerOrderOthers(APIView):
 
         phone = received_json_data["user_phone"]
         user_p = UserProfileInfo.objects.get(phone_primary=phone)
-        order_list = Order.objects.filter(user_customer = user_p).exclude(order_status__code = GEN_Constants.ORDER_STATUS_AGENT_APPROVED).order_by('-updated_at')
+        # order_list = Order.objects.filter(user_customer = user_p).exclude(order_status__code = GEN_Constants.ORDER_STATUS_AGENT_APPROVED).order_by('-updated_at')
+        order_list = Order.objects.filter(schedule_requested_time__lt = datetime.datetime.now()).order_by(
+            'schedule_requested_time')
+
         order_list_s = CustomerAllOrderSerializer(order_list, many=True)
 
 
@@ -1248,6 +1297,153 @@ def alter_order(request):
 # "item_list":[{"product_id":24, "uom_id":7,"quantity":5 },{"product_id":24, "uom_id":7,"quantity":5 }]
 # }
 
+
+class CreateOrder(APIView):
+
+
+    def proceed_save(self, received_json_data):
+
+        user_data_set = received_json_data["user"]
+        order_data_set = received_json_data["order"]
+        order_item_data_set_arr = received_json_data["order_item"]
+
+
+        user_q = db_operations_support.get_db_object_g_last(UserProfileInfo,{"phone_primary" : user_data_set["phone"]})
+
+        proceed_current_process_model = False
+        order_base_id = -1
+        if user_q is not None:
+            user_customer_id = user_q.id
+            order_data_set = received_json_data["order"]
+
+            order_data_set_normalized = {}
+            time_str = order_data_set["slot_time"]
+            converted_date = datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+            order_data_set_normalized["schedule_requested_time"] = converted_date
+            order_data_set_normalized["user_customer"] = user_customer_id
+            order_data_set_normalized["brand"] = order_data_set["brand_id"]
+            order_data_set_normalized["branch"] = order_data_set["branch_id"]
+
+            order_status_q = db_operations_support.get_db_object_g_last(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_INITIATED})
+
+            order_data_set_normalized["order_status"] = order_status_q.id
+
+            order_data_set_normalized["order_id"] = support_db.unique_string_generator(Order, "order_id")
+
+            proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                Order, order_data_set_normalized)
+            order_base_id = serializer_current_process_model["id"]
+
+            if proceed_current_process_model == False:
+                print("order save error")
+                print(serializer_current_process_model.errors)
+
+        if proceed_current_process_model:
+
+            for e_order_item_data_set in order_item_data_set_arr:
+
+                order_item_data_set_normalized = {}
+                order_item_data_set_normalized["order_item_id"] = support_db.unique_string_generator(OrderItem, "order_item_id")
+                order_item_data_set_normalized["order"] = order_base_id
+                order_item_data_set_normalized["status_note"] = "."
+                order_item_data_set_normalized["item_quantity"] = e_order_item_data_set["quantity"]
+
+                servisable_product_q = db_operations_support.get_db_object_g_last(BranchServisableProduct, {
+                    "id": e_order_item_data_set["servisable_product_id"]})
+
+                order_item_data_set_normalized["servisable_product"] = servisable_product_q.id
+                order_item_data_set_normalized["product"] = servisable_product_q.product.id
+                order_item_data_set_normalized["item_name"] = servisable_product_q.product.name
+                order_item_data_set_normalized["status_note"] = "."
+                order_item_data_set_normalized["brand_branch"] = servisable_product_q.branch.id
+                order_item_data_set_normalized["brand"] = servisable_product_q.branch.brand.id
+
+                measurementunit_q = db_operations_support.get_db_object_g_last(ItemMeasuementUnit, {
+                    "name": e_order_item_data_set["uom"]})
+
+                order_item_data_set_normalized["measurement_unit"] = measurementunit_q.id
+
+                proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+                    OrderItem, order_item_data_set_normalized)
+
+                if proceed_current_process_model == False:
+                    print("item save error")
+
+
+                    print(serializer_current_process_model.errors)
+
+        if order_base_id != -1:
+            update_order_request_to_branch_user(order_base_id)
+        return proceed_current_process_model, {"title": "Booking Failed", "message": "Please try after some time."}
+
+    def proceed_validation(self, received_json_data):
+
+        proceed_current_process_model = True
+        payload = {"title":"Successful", "message":"Booking Request Successful.Please wait for confirmation"}
+
+        order_data_set = received_json_data["order"]
+        time_str = order_data_set["slot_time"]
+        brand_id = order_data_set["brand_id"]
+        branch_id = order_data_set["branch_id"]
+
+        schedule_requested_date_time = datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+
+        schedule_requested_day_of_week = schedule_requested_date_time.isoweekday()
+        schedule_requested_time = schedule_requested_date_time.time()
+
+        servicable_criteria_q = ServisableDaysCriteria.objects.filter(branch__id = branch_id, day_of_week = schedule_requested_day_of_week, is_online=True, is_available =True, service_start_time__lte=schedule_requested_time, service_end_time__gte=schedule_requested_time)
+
+        if(servicable_criteria_q.count() == 0):
+            proceed_current_process_model = False
+            payload = {"title": "Booking Failed", "message": "Branch not operational at selected time. Please try choosing some other time."}
+
+
+
+        if proceed_current_process_model:
+
+            branch_q = BrandBranchBasicInfo.objects.get(id = branch_id)
+
+            store_capacity = branch_q.store_capacity
+
+
+            date_rec = schedule_requested_date_time.strftime("%Y-%m-%d ")
+            date_time = schedule_requested_date_time.strftime("%m/%d/%Y, %H:%M:%S")
+            schedule_requested_hour_str = schedule_requested_date_time.strftime("%H")
+
+            filter_start_time_str = date_rec + schedule_requested_hour_str+":00:00"
+            filter_end_time_str = date_rec + schedule_requested_hour_str+":59:59"
+
+            filter_start_time = datetime.datetime.strptime(filter_start_time_str, "%Y-%m-%d %H:%M:%S")
+            filter_end_time = datetime.datetime.strptime(filter_end_time_str, "%Y-%m-%d %H:%M:%S")
+            Orders_q = Order.objects.filter(branch__id = branch_id,  order_accepted =True, schedule_requested_time__range=(filter_start_time, filter_end_time))
+            filled_capacity = Orders_q.count()
+
+            if(filled_capacity >= store_capacity):
+                proceed_current_process_model = False
+                payload = {"title": "Booking Failed",
+                           "message": "Selected time is booked. Please try choosing some other time."}
+
+        return proceed_current_process_model, payload
+
+    def post(self,request):
+
+        received_json_data=json.loads(request.body)
+        proceed_current_process_model, payload  = self.proceed_validation(received_json_data)
+        if proceed_current_process_model:
+            proceed_current_process_model, payload  = self.proceed_save(received_json_data)
+
+        if proceed_current_process_model:
+            payload = {"title": "Successful", "message": "Booking Request Successful.Please wait for confirmation"}
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":payload}),
+                content_type="application/json")
+        else:
+            return HttpResponse(
+                json.dumps({"SUCCESS": False, "RESPONSE_MESSAGE": payload, "ERROR": payload}),
+                content_type="application/json")
+
+
+
+
 @csrf_exempt
 def order_create_m(request):
 
@@ -1334,6 +1530,94 @@ def order_create_m(request):
             return HttpResponse(
                 json.dumps({"SUCCESS": False, "RESPONSE_MESSAGE": "Error", "ERROR": order_item_form.errors}),
                 content_type="application/json")
+
+
+# @csrf_exempt
+# def order_create_m(request):
+#
+#     if request.method == "POST":
+#
+#         #
+#         received_json_data = json.loads(request.body)
+#
+#         user_data_set = received_json_data["user"]
+#         order_data_set = received_json_data["order"]
+#         order_item_data_set_arr = received_json_data["order_item"]
+#
+#
+#         user_q = db_operations_support.get_db_object_g_last(UserProfileInfo,{"phone_primary" : user_data_set["phone"]})
+#
+#         proceed_current_process_model = False
+#         order_base_id = -1
+#         if user_q is not None:
+#             user_customer_id = user_q.id
+#             order_data_set = received_json_data["order"]
+#
+#             order_data_set_normalized = {}
+#             time_str = order_data_set["slot_time"]
+#             converted_date = datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+#             order_data_set_normalized["schedule_requested_time"] = converted_date
+#             order_data_set_normalized["user_customer"] = user_customer_id
+#             order_data_set_normalized["brand"] = order_data_set["brand_id"]
+#             order_data_set_normalized["branch"] = order_data_set["branch_id"]
+#
+#             order_status_q = db_operations_support.get_db_object_g_last(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_INITIATED})
+#
+#             order_data_set_normalized["order_status"] = order_status_q.id
+#
+#             order_data_set_normalized["order_id"] = support_db.unique_string_generator(Order, "order_id")
+#
+#             proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+#                 Order, order_data_set_normalized)
+#             order_base_id = serializer_current_process_model["id"]
+#
+#             if proceed_current_process_model == False:
+#                 print("order save error")
+#                 print(serializer_current_process_model.errors)
+#
+#         if proceed_current_process_model:
+#
+#             for e_order_item_data_set in order_item_data_set_arr:
+#
+#                 order_item_data_set_normalized = {}
+#                 order_item_data_set_normalized["order_item_id"] = support_db.unique_string_generator(OrderItem, "order_item_id")
+#                 order_item_data_set_normalized["order"] = order_base_id
+#                 order_item_data_set_normalized["status_note"] = "."
+#                 order_item_data_set_normalized["item_quantity"] = e_order_item_data_set["quantity"]
+#
+#                 servisable_product_q = db_operations_support.get_db_object_g_last(BranchServisableProduct, {
+#                     "id": e_order_item_data_set["servisable_product_id"]})
+#
+#                 order_item_data_set_normalized["servisable_product"] = servisable_product_q.id
+#                 order_item_data_set_normalized["product"] = servisable_product_q.product.id
+#                 order_item_data_set_normalized["item_name"] = servisable_product_q.product.name
+#                 order_item_data_set_normalized["status_note"] = "."
+#                 order_item_data_set_normalized["brand_branch"] = servisable_product_q.branch.id
+#                 order_item_data_set_normalized["brand"] = servisable_product_q.branch.brand.id
+#
+#                 measurementunit_q = db_operations_support.get_db_object_g_last(ItemMeasuementUnit, {
+#                     "name": e_order_item_data_set["uom"]})
+#
+#                 order_item_data_set_normalized["measurement_unit"] = measurementunit_q.id
+#
+#                 proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(
+#                     OrderItem, order_item_data_set_normalized)
+#
+#                 if proceed_current_process_model == False:
+#                     print("item save error")
+#
+#
+#                     print(serializer_current_process_model.errors)
+#
+#         if order_base_id != -1:
+#             update_order_request_to_branch_user(order_base_id)
+#         if proceed_current_process_model:
+#             return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Order Placed Successfully"}),
+#                 content_type="application/json")
+#         else:
+#             return HttpResponse(
+#                 json.dumps({"SUCCESS": False, "RESPONSE_MESSAGE": "Error", "ERROR": order_item_form.errors}),
+#                 content_type="application/json")
 
 def update_order_request_to_branch_user(order_base_id):
     print("recc-id")
@@ -1666,9 +1950,9 @@ def authenticate_app_user(request):
 
         user_profile1 = UserProfileInfo.objects.filter(app_user_name=user_name, password = password)
 
-
-
+        print("came23332")
         if not user_profile1:
+            print("came2333")
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User Not Exist"}), content_type="application/json")
         else:
             user_profile = UserProfileInfo.objects.get(app_user_name=user_name, password = password)
@@ -1876,6 +2160,9 @@ def register_business_agent(request):
         return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User3 already Exist"}), content_type="application/json")
 
 
+
+
+
 @csrf_exempt
 def RegisterAgent(request):
 
@@ -1947,9 +2234,10 @@ def RegisterAgent(request):
             user_data["age"] = received_json_data["age"]
             user_data["gender"] = received_json_data["gender"][0]
 
-            # print("serrrddaa")
-            # print(user_data)
+            print("serrrddaa")
+            print(user_data)
 
+            # user_data
             user_form = UserFormCustomer(user_data)
             profile_form = UserProfileInfoForm(data=user_data)
 
@@ -2237,7 +2525,7 @@ class StoreBranchListAdmin(APIView):
         print(":cameggg");
 
         category = BrandBranchBasicInfo.objects.all()
-        serializer_cat = BrandBranchBasicInfoSerializer(category, many=True)
+        serializer_cat = BrandBranchBasicInfoSerializerAD(category, many=True)
 
         base_data = {}
         base_data["branchlist"] = serializer_cat.data
@@ -2338,51 +2626,155 @@ class BranchProductListCustomer1(APIView):
 
         return Response(base_data)
 
-class BranchProductListCustomer(APIView):
-
+class BranchProductSupportDataCustomer(APIView):
     def post(self,request):
         received_json_data = json.loads(request.body)
         #
+        brand_id = received_json_data["brand_id"]
         branch_id = received_json_data["branch_id"]
         print(":cameggg");
 
         print(received_json_data);
         # branch_id = "1"
 
+        category_servisable = BranchServisableCategory.objects.filter(is_available=True, product_category__is_available=True, is_online=True, branch__id = branch_id).values_list('product_category__id', flat=True)
+        product_base_servisable = BranchServisableProductBase.objects.filter(is_available = True, is_online=True, branch__id = branch_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
 
-        category_servisable = BranchServisableCategory.objects.filter(is_available=True, branch__id = branch_id).values_list('product_category__id', flat=True)
-        product_base_servisable = BranchServisableProductBase.objects.filter(is_available = True,branch__id = branch_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
-        product_servisable = BranchServisableProduct.objects.filter(is_available=True, branch__id = branch_id, product__product_base__product_category__in=category_servisable)
-            # .values_list('product__id', flat=True)
-
-        print("recc aa")
-        print(category_servisable)
 
         category = ProductCategory.objects.filter(id__in=category_servisable)
         # category_ids = ProductCategory.objects.filter(id__in=category_servisable).values_list('id', flat=True)
         # category = ProductCategory.objects.filter(is_available=True)
         serializer_cat = ProductCategorySerializer(category, many=True)
-
-        # product = Product.objects.filter(id__in = product_servisable).order_by('-priority')
-
-        # user = UserProfileInfo.objects.get(phone_primary=phone)
-
-        serializer_pro = ServisableProductSerializerCustomer(product_servisable, context={"language":"en"},   many=True)
-
         product_base = ProductBase.objects.filter(id__in = product_base_servisable)
-        serializer_pro_base = ProductBaseSerializer(product_base, many=True)
 
-        itemMeasuementUnit_base = ItemMeasuementUnit.objects.filter(is_available=True)
+
+        itemMeasuementUnit_base = ItemMeasuementUnit.objects.filter(is_available=True, brand__id = brand_id)
         serialiser_itemMeasuementUnit_base = ItemMeasuementUnitSerializer(itemMeasuementUnit_base, many=True)
+
+        serializer_pro_base = ProductBaseSerializer(product_base, many=True)
 
         base_data = {}
 
         base_data["uom"] = serialiser_itemMeasuementUnit_base.data
         base_data["category"] = serializer_cat.data
-        base_data["product"] = serializer_pro.data
         base_data["product_base"] = serializer_pro_base.data
 
         return Response(base_data)
+
+class BranchProductListCustomer(APIView):
+
+    def post(self,request):
+
+        received_json_data = json.loads(request.body)
+        brand_id = received_json_data["brand_id"]
+        branch_id = received_json_data["branch_id"]
+        category_id = received_json_data["category_id"]
+
+        if "page_no" in received_json_data:
+            page_no = received_json_data["page_no"]
+        else:
+            page_no = 1
+
+
+        if category_id == -1:
+            category_servisable = BranchServisableCategory.objects.filter(is_available=True, product_category__is_available=True, is_online=True, branch__id = branch_id).values_list('product_category__id', flat=True)
+            # product_base_servisable = BranchServisableProductBase.objects.filter(is_available = True, is_online=True, branch__id = branch_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
+            product_servisable = BranchServisableProduct.objects.filter(is_available=True,product__is_available=True, is_online=True, branch__id = branch_id, product__product_base__product_category__in=category_servisable)
+        else:
+            print("came categvvv")
+            product_servisable = BranchServisableProduct.objects.filter(is_available=True,product__is_available=True, is_online=True, branch__id = branch_id, product__product_base__product_category__id=category_id)
+
+        product_servisable = get_paginated_data(product_servisable, page_no)
+        serializer_pro = ServisableProductSerializerCustomer(product_servisable, context={"language":"en"},   many=True)
+        base_data = {}
+        base_data["product"] = serializer_pro.data
+
+        return Response(base_data)
+
+class BranchProductListAdmin2(APIView):
+
+    def post(self,request):
+
+        received_json_data = json.loads(request.body)
+        brand_id = received_json_data["brand_id"]
+
+        category_id = received_json_data["category_id"]
+
+        if "page_no" in received_json_data:
+            page_no = received_json_data["page_no"]
+        else:
+            page_no = 1
+
+
+        if category_id == -1:
+            product_servisable = Product.objects.all()
+        else:
+            product_servisable = Product.objects.filter(product_base__product_category=category_id)
+
+        product_servisable = get_paginated_data(product_servisable, page_no)
+        serializer_pro = ProductADFeedSerializer(product_servisable, context={"language":"en"},   many=True)
+        base_data = {}
+        base_data["product"] = serializer_pro.data
+
+        return Response(base_data)
+
+def get_paginated_data(queyset, page_no, page_size = 4):
+    # size = queyset.count()
+    end = page_no * page_size+1
+    start = end-page_size
+    queryset = queyset[start:end]
+    return queryset
+
+
+
+
+
+
+# class BranchProductListCustomer(APIView):
+#
+#     def post(self,request):
+#         received_json_data = json.loads(request.body)
+#         #
+#         branch_id = received_json_data["branch_id"]
+#         print(":cameggg");
+#
+#         print(received_json_data);
+#         # branch_id = "1"
+#
+#
+#         category_servisable = BranchServisableCategory.objects.filter(is_available=True, product_category__is_available=True, is_online=True, branch__id = branch_id).values_list('product_category__id', flat=True)
+#         product_base_servisable = BranchServisableProductBase.objects.filter(is_available = True, is_online=True, branch__id = branch_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
+#         product_servisable = BranchServisableProduct.objects.filter(is_available=True,product__is_available=True, is_online=True, branch__id = branch_id, product__product_base__product_category__in=category_servisable)
+#             # .values_list('product__id', flat=True)
+#
+#         print("recc aa")
+#         print(category_servisable)
+#
+#         category = ProductCategory.objects.filter(id__in=category_servisable)
+#         # category_ids = ProductCategory.objects.filter(id__in=category_servisable).values_list('id', flat=True)
+#         # category = ProductCategory.objects.filter(is_available=True)
+#         serializer_cat = ProductCategorySerializer(category, many=True)
+#
+#         # product = Product.objects.filter(id__in = product_servisable).order_by('-priority')
+#
+#         # user = UserProfileInfo.objects.get(phone_primary=phone)
+#
+#         serializer_pro = ServisableProductSerializerCustomer(product_servisable, context={"language":"en"},   many=True)
+#
+#         product_base = ProductBase.objects.filter(id__in = product_base_servisable)
+#         serializer_pro_base = ProductBaseSerializer(product_base, many=True)
+#
+#         itemMeasuementUnit_base = ItemMeasuementUnit.objects.filter(is_available=True)
+#         serialiser_itemMeasuementUnit_base = ItemMeasuementUnitSerializer(itemMeasuementUnit_base, many=True)
+#
+#         base_data = {}
+#
+#         base_data["uom"] = serialiser_itemMeasuementUnit_base.data
+#         base_data["category"] = serializer_cat.data
+#         base_data["product"] = serializer_pro.data
+#         base_data["product_base"] = serializer_pro_base.data
+#
+#         return Response(base_data)
 
 
 class BranchProductListAdmin(APIView):
@@ -2399,7 +2791,7 @@ class BranchProductListAdmin(APIView):
 
         category_servisable = BranchServisableCategory.objects.filter(branch__id = branch_id).values_list('product_category__id', flat=True)
         product_base_servisable = BranchServisableProductBase.objects.filter(branch__id = branch_id, product_base__product_category__in=category_servisable).values_list('product_base__id', flat=True)
-        product_servisable = BranchServisableProduct.objects.filter(branch__id = branch_id, product__product_base__product_category__in=category_servisable).values_list('product__id', flat=True)
+        # product_servisable = BranchServisableProduct.objects.filter(branch__id = branch_id, product__product_base__product_category__in=category_servisable).values_list('product__id', flat=True)
 
         print("recc aa")
         print(category_servisable)
@@ -2409,12 +2801,16 @@ class BranchProductListAdmin(APIView):
         # category = ProductCategory.objects.filter(is_available=True)
         serializer_cat = ProductCategorySerializer(category, many=True)
 
-        product = Product.objects.filter(id__in = product_servisable).order_by('-priority')
+        print("start1000")
+        # product_servisable = BranchServisableProduct.objects.filter(branch__id = branch_id, product__product_base__product_category__in=category_servisable).values_list('product__id', flat=True)
+        product_servisable = BranchServisableProduct.objects.filter(branch__id = branch_id, product__product_base__product_category__in=category_servisable).order_by('-product__priority')
+        # product = Product.objects.filter(id__in = product_servisable).order_by('-priority')
 
         # user = UserProfileInfo.objects.get(phone_primary=phone)
-
-        serializer_pro = ProductSerializer(product, context={"language":"en"},   many=True)
-
+        print("start10002")
+        serializer_pro = BranchServisableProductSerializerAd(product_servisable, context={"language":"en"}, many=True)
+        print(serializer_pro.data)
+        print("start1003")
         product_base = ProductBase.objects.filter(id__in = product_base_servisable)
         serializer_pro_base = ProductBaseSerializer(product_base, many=True)
 
@@ -2425,9 +2821,10 @@ class BranchProductListAdmin(APIView):
 
         base_data["uom"] = serialiser_itemMeasuementUnit_base.data
         base_data["category"] = serializer_cat.data
+        base_data["product"] = []
         base_data["product"] = serializer_pro.data
         base_data["product_base"] = serializer_pro_base.data
-
+        # base_data["product_base"] = []
         return Response(base_data)
 
 class BrandProductListAdmin(APIView):
@@ -2481,18 +2878,19 @@ class BranchProductListServisableCategorySpecific(APIView):
         received_json_data = json.loads(request.body)
         #
         servisable_category_id = received_json_data["servisable_category_id"]
+        branch_id = received_json_data["branch_id"]
         print(":cameggg");
 
         print(received_json_data);
         # branch_id = "1"
 
 
-        category_servisable_q = BranchServisableCategory.objects.get(id = servisable_category_id)
+        category_servisable_q = BranchServisableCategory.objects.get(id = servisable_category_id, branch__id = branch_id)
         category_id = category_servisable_q.product_category.id
 
 
         # product_base_servisable = BranchServisableProduct.objects.filter(product__product_base__product_category=category_id)
-        product_servisable = BranchServisableProduct.objects.filter(product__product_base__product_category=category_id)
+        product_servisable = BranchServisableProduct.objects.filter(product__product_base__product_category=category_id, branch__id = branch_id)
             # .values_list('product_base__id', flat=True)
         # product_servisable = BranchServisableProduct.objects.filter(product__product_base__product_category=category_id).values_list('product__id', flat=True)
 
@@ -2525,18 +2923,19 @@ class BranchProductListServisableCategorySpecificDisabled(APIView):
         received_json_data = json.loads(request.body)
         #
         servisable_category_id = received_json_data["servisable_category_id"]
+        branch_id = received_json_data["branch_id"]
         print(":cameggg");
 
         print(received_json_data);
         # branch_id = "1"
 
 
-        category_servisable_q = BranchServisableCategory.objects.get(id = servisable_category_id)
+        category_servisable_q = BranchServisableCategory.objects.get(id = servisable_category_id, branch__id = branch_id)
         category_id = category_servisable_q.product_category.id
 
 
         # product_base_servisable = BranchServisableProduct.objects.filter(product__product_base__product_category=category_id)
-        product_servisable = BranchServisableProduct.objects.filter(is_available = False, product__product_base__product_category=category_id)
+        product_servisable = BranchServisableProduct.objects.filter(is_available = False, product__product_base__product_category=category_id, branch__id = branch_id)
             # .values_list('product_base__id', flat=True)
         # product_servisable = BranchServisableProduct.objects.filter(product__product_base__product_category=category_id).values_list('product__id', flat=True)
 

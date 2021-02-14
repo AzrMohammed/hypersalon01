@@ -9,8 +9,8 @@
 #
 # USER_TYPES_DIC = dict(USER_TYPES)
 
-# SERVER_PREFIX = "http://192.168.0.100:8000/"
-SERVER_PREFIX = "http://103.118.188.160:8878/"
+# SERVER_PREFIX = "http://192.168.2.8:8000/"
+# SERVER_PREFIX = "http://103.118.188.160:8878/"
 
 # Enterprise | Personal | Official | SecondPerson-Agent
 
