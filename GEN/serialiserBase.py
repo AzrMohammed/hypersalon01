@@ -1,8 +1,10 @@
 from rest_framework import serializers
-from GEN import dbconstants, GEN_Constants
+from GEN import dbconstants, GEN_Constants,value_constant
+from .value_constant import get_string_value_by_user
 from .models import UserProfileInfo, CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, ProductCategory, \
     Product, ProductBase, ItemMeasuementUnit, OrderItem, C19SymptomSet, UserHealthProfile, Order, BrandBranchBasicInfo, \
     BranchServisableCategory, BranchServisableProductBase, BranchServisableProduct, ServisableDaysCriteria
+
 
 
 class ProductSuggestionListSerializer(serializers.ModelSerializer):
@@ -138,48 +140,10 @@ class CustomerAllOrderSerializer(serializers.ModelSerializer):
         return obj.branch.phone_secondary
 
     def get_status_title(self, obj):
-
-        status = "Pending Approval";
-        order_status = obj.order_status.code
-
-        if order_status == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
-            status = "Order Approved"
-        elif order_status == GEN_Constants.ORDER_STATUS_INITIATED:
-            status = "Pending Approval"
-        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT:
-            status = "Order Rejected"
-        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_OTHERS:
-            status = "Order Rejected"
-        elif order_status == GEN_Constants.ORDER_STATUS_NO_SHOW:
-            status = "Not Reachable"
-        elif order_status == GEN_Constants.ORDER_STATUS_ONGOING:
-            status = "Ongoing"
-        elif order_status == GEN_Constants.ORDER_STATUS_COMPLETED:
-            status = "Completed"
-
-        return status
+        return obj.get_status_title()
 
     def get_status_text(self, obj):
-
-        status = "Pending Approval";
-        order_status = obj.order_status.code
-
-        if order_status == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
-            status = "Show the QR Code for easy check-in"
-        elif order_status == GEN_Constants.ORDER_STATUS_INITIATED:
-            status = "Please be patient. the agent will approve shortly."
-        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT:
-            status = "No slot available"
-        elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_OTHERS:
-            status = "Not operating in requested time"
-        elif order_status == GEN_Constants.ORDER_STATUS_NO_SHOW:
-            status = "You have not checked-In for the Appointment"
-        elif order_status == GEN_Constants.ORDER_STATUS_ONGOING:
-            status = "Appointment marked as Ongoing"
-        elif order_status == GEN_Constants.ORDER_STATUS_COMPLETED:
-            status = "Booking has been marked as completed"
-
-        return status
+        return obj.get_status_text()
 
     def get_order_status(self, obj):
         if obj.order_status is not None:
@@ -194,6 +158,116 @@ class CustomerAllOrderSerializer(serializers.ModelSerializer):
         order_items_s = OrderItemSerializer(order_items, many=True).data
         return order_items_s
 
+
+class OrderDetail01SerializerWithActions(serializers.ModelSerializer):
+    order_item = serializers.SerializerMethodField()
+    delivery_status = serializers.SerializerMethodField()
+    status_text = serializers.SerializerMethodField()
+    status_code = serializers.SerializerMethodField()
+    requested_time = serializers.SerializerMethodField()
+    can_accept = serializers.SerializerMethodField()
+    can_checkin = serializers.SerializerMethodField()
+    can_complete_service = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ['id', 'can_accept', 'can_checkin', 'can_complete_service', 'requested_time', 'order_id', 'status_code', 'delivery_charges', 'status_text', 'delivery_status', 'order_item']
+        depth = 0
+
+
+    def get_can_accept(self, obj):
+        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
+
+    def get_can_complete_service(self, obj):
+        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_COMPLETE_REQUEST), "SHOW_MESSAGE":False}
+
+    def get_can_complete_service(self, obj):
+        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
+
+    def get_can_checkin(self, obj):
+        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_CHECKIN), "SHOW_MESSAGE":False}
+        # return {"STATUS":False, "MESSAGE":"Checkin Timeout", "SHOW_MESSAGE":False}
+
+    def get_requested_time(self, obj):
+        return str(obj.schedule_requested_time)
+
+    def get_status_code(self, obj):
+        if obj.order_status is not None:
+            return obj.order_status.code
+        else:
+            return "NO_STATUS"
+
+    def get_delivery_status(self, obj):
+        return "None"
+
+
+
+    def get_status_text(self, obj):
+        if obj.branch is not None:
+            return obj.branch.name
+        else:
+            return ""
+
+    def get_order_item(self, obj):
+
+        order_items = OrderItem.objects.filter(order=obj).order_by('-created_at')
+
+        order_items_s = OrderItemSerializer(order_items, many=True).data
+        return order_items_s
+
+class OrderAgentResponseSerializer(serializers.ModelSerializer):
+    order_item = serializers.SerializerMethodField()
+    delivery_status = serializers.SerializerMethodField()
+    status_text = serializers.SerializerMethodField()
+    status_code = serializers.SerializerMethodField()
+    requested_time = serializers.SerializerMethodField()
+    agent_response_details = serializers.SerializerMethodField()
+    branch_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ['id', 'branch_details', 'agent_response_details',  'requested_time', 'order_id', 'status_code', 'delivery_charges', 'status_text', 'delivery_status', 'order_item']
+        depth = 0
+
+    def get_agent_response_details(self, obj):
+
+        response = {"status": False, "status_title":"Booking Not Confirmed", "status_text":"Booking has not been confirmed on requested time. Please try scheduling on some other time" }
+        if obj.order_status is not None:
+            if obj.order_status.code == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
+                response = {"status": True, "status_title":get_string_value_by_user(value_constant.KEY_D_BOOKING_CONFIRMED),
+                            "status_text":get_string_value_by_user(value_constant.KEY_D_BOOKING_SCHEDULED_REQUEST_TIME)}
+        return  response
+
+
+    def get_branch_details(self, obj):
+        return obj.branch.get_branch_display_details()
+
+    def get_requested_time(self, obj):
+        return str(obj.schedule_requested_time)
+
+    def get_status_code(self, obj):
+        if obj.order_status is not None:
+            return obj.order_status.code
+        else:
+            return "NO_STATUS"
+
+    def get_delivery_status(self, obj):
+        return "None"
+
+
+
+    def get_status_text(self, obj):
+        if obj.branch is not None:
+            return obj.branch.name
+        else:
+            return ""
+
+    def get_order_item(self, obj):
+
+        order_items = OrderItem.objects.filter(order=obj).order_by('-created_at')
+
+        order_items_s = OrderItemSerializer(order_items, many=True).data
+        return order_items_s
 
 class OrderDetail01Serializer(serializers.ModelSerializer):
     order_item = serializers.SerializerMethodField()
@@ -218,15 +292,7 @@ class OrderDetail01Serializer(serializers.ModelSerializer):
             return "NO_STATUS"
 
     def get_delivery_status(self, obj):
-        #
-        # if obj.status == dbconstants.ORDER_PLACED:
-        #     return "Order has been placed successfully. Customer Executive will call in some time"
-        # elif obj.status == dbconstants.ORDER_CONFIRMED_BY_CUSTOMER:
-        #     return "Order will be delivered by the 11 Am tomorrow"
-        # elif obj.status == dbconstants.ORDER_PICKEDUP:
-        #     return "Order pickedup and the delivery executive is on his way"
-        # elif obj.status == dbconstants.ORDER_CANCELLED:
-            return "None"
+        return "None"
 
 
 
@@ -235,8 +301,6 @@ class OrderDetail01Serializer(serializers.ModelSerializer):
             return obj.branch.name
         else:
             return ""
-        # return obj.order_status.name
-        # return dbconstants.ORDER_STATUS_DISPLAY[obj.status]
 
     def get_order_item(self, obj):
 
@@ -268,6 +332,51 @@ class BranchDetailAdminSerializer(serializers.ModelSerializer):
         ServisableDaysCriteria_data = ServisableDaysCriteriaSerializer(ServisableDaysCriteria_q, many=True).data
         return ServisableDaysCriteria_data
 
+
+class BrandOrderListSerializer(serializers.ModelSerializer):
+
+    order_item = serializers.SerializerMethodField()
+
+    order_status = serializers.SerializerMethodField()
+    status_title = serializers.SerializerMethodField()
+    status_text = serializers.SerializerMethodField()
+    customer = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
+    branch_address = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ['id', 'order_id', 'schedule_requested_time', 'order_status', 'status_title', 'status_text', 'customer', 'order_item', 'branch_name', 'branch_address']
+        depth = 0
+
+
+    def get_branch_name(self, obj):
+        return obj.branch.name
+
+    def get_branch_address(self, obj):
+        return obj.branch.address_text
+
+
+    def get_customer(self, obj):
+        return {"name":(obj.user_customer.getUserDisplayName()), "phone":obj.user_customer.phone_primary}
+
+    def get_order_status(self, obj):
+        print("order idd")
+        print(obj.order_id)
+        return str(obj.order_status.code)
+
+    def get_status_title(self, obj):
+        return obj.get_status_title()
+
+    def get_status_text(self, obj):
+        return obj.get_status_text()
+
+    def get_order_item(self, obj):
+
+        order_items = OrderItem.objects.filter(order=obj).order_by('-created_at')
+
+        order_items_s = OrderItemSerializer(order_items, many=True).data
+        return order_items_s
 
 class BranchOrderListSerializer(serializers.ModelSerializer):
     order_item = serializers.SerializerMethodField()

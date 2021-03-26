@@ -60,11 +60,14 @@ path('OrderMarkAsCompleted/', views.OrderMarkAsCompleted.as_view(), name = "Orde
 path('OrderMarkAsCheckedIn/', views.OrderMarkAsCheckedIn.as_view(), name = "OrderMarkAsCheckedIn"),
 
 path('SamplePush/', views.SamplePush.as_view(), name = "SamplePush"),
+path('BrandOrders/', views.BrandOrders.as_view(), name = "BrandOrders"),
 path('BrandBranchOrders/', views.BrandBranchOrders.as_view(), name = "BrandBranchOrders"),
 path('BrandBranchOrdersOngoing/', views.BrandBranchOrdersOngoing.as_view(), name = "BrandBranchOrdersOngoing"),
 path('BrandBranchOrdersPendingApproval/', views.BrandBranchOrdersPendingApproval.as_view(), name = "BrandBranchOrdersPendingApproval"),
 path('BrandBranchOrdersUpcoming/', views.BrandBranchOrdersUpcoming.as_view(), name = "BrandBranchOrdersUpcoming"),
 path('GetOrderDetails01/', views.GetOrderDetails01.as_view(), name = "GetOrderDetails01"),
+path('GetOrderAgentResponse/', views.GetOrderAgentResponse.as_view(), name = "GetOrderAgentResponse"),
+path('BaGetOrderDetailswithActions/', views.BaGetOrderDetailswithActions.as_view(), name = "BaGetOrderDetailswithActions"),
 
 path('product_list/', views.product_list, name = "product_list"),
 path('change_order_status/', views.change_order_status, name = "change_order_status"),

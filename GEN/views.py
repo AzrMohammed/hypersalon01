@@ -21,6 +21,7 @@ from rest_framework.views import APIView
 from DbUtils import db_operations_support, support_serializer_submit, support_db
 from GEN import GEN_Constants
 from GEN import dbconstants
+from GEN import value_constant
 from GEN.forms import UserFormCustomer, UserProfileInfoForm, IOrderForm, IOrderItemForm, OrderLogForm, OrderItemLogForm, \
     UserHealthProfileForm
 from .models import Order, UserProfileInfo, OrderItem, \
@@ -35,10 +36,12 @@ from .serialiserBase import EnterPriseForm, \
     ProductCategorySerializerBranchUser, ServisableProductSerializerBranchUser, ServisableProductSerializerCustomer, \
     CustomerAllOrderSerializer, BranchDetailAdminSerializer, ProductCategorySerializerAd, StoreUomSerializer, \
     BrandBranchBasicInfoSerializerAD, BranchAgentDetailSerializer, BranchServisableProductSerializerAd, \
-    ProductADFeedSerializer
+    ProductADFeedSerializer, BrandOrderListSerializer, OrderDetail01SerializerWithActions, OrderAgentResponseSerializer
 
 import base64
 from django.core.files.base import ContentFile
+
+from .value_constant import get_string_value_by_user
 
 
 def get_file_from_base64(b64_string):
@@ -145,6 +148,85 @@ class BrandBranchOrdersUpcoming(APIView):
         order_list = order_list.order_by('schedule_requested_time')
 
         order_list_s = BranchOrderListSerializer(order_list, many=True)
+
+        base_data = {}
+        base_data["order"] = order_list_s.data
+        base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
+        base_data["status_text"] = "RECEIVED"
+
+        return Response(base_data)
+
+
+def get_order_filter_type(filter_group):
+
+    dataset = {}
+
+    if filter_group == "ORD_GR_ONGOING":
+        dataset["order_status__code"] = GEN_Constants.ORDER_STATUS_ONGOING
+    elif filter_group == "ORD_GR_UPCOMING":
+        dataset["order_status__code"] = GEN_Constants.ORDER_STATUS_AGENT_APPROVED
+    elif filter_group == "ORD_GR_PENDING_APPROVAL":
+        dataset["order_status__code"] = GEN_Constants.ORDER_STATUS_INITIATED
+    elif filter_group == "ORD_GR_REJECTED_ALL":
+        dataset["order_status__code"] = GEN_Constants.ORDER_STATUS_INITIATED
+    elif filter_group == "GR_ALL":
+        pass
+
+    return dataset
+
+
+
+class BrandOrders(APIView):
+
+    def post(self, request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+        brand_id = received_json_data["brand_id"]
+        order_list = Order.objects.filter(brand__id = brand_id)
+
+
+        if "page_no" in received_json_data:
+            page_no = received_json_data["page_no"]
+        else:
+            page_no = 1
+
+        if "branch_id" in received_json_data:
+            order_list = order_list.filter(branch__id = received_json_data["branch_id"])
+
+        print("order_status_code===1")
+        if "order_status_code" in received_json_data:
+            print("order_status_code===2")
+            order_status_code = received_json_data["order_status_code"]
+            if order_status_code != "ORD_ALL":
+                print("order_status_code===3")
+                print(order_status_code)
+                order_list = order_list.filter(order_status__code = order_status_code)
+                # order_list = order_list.filter(order_status__code = "ORD_APPROVED")
+
+
+        print("final liste count")
+        print("==="+str(order_list.count()))
+
+        if "filter_start_date" in received_json_data:
+            filter_start_date = received_json_data["filter_start_date"]
+            order_list = order_list.filter(schedule_requested_time__gte = filter_start_date+" 00:00:00")
+
+        if "filter_end_date" in received_json_data:
+            filter_end_date = received_json_data["filter_end_date"]
+            order_list = order_list.filter(schedule_requested_time__lte = filter_end_date+" 23:59:59")
+
+        print("c2==="+str(order_list.count()))
+        order_list = order_list.order_by('-updated_at')
+
+
+        order_list = get_paginated_data(order_list, page_no, page_size=3)
+        print("c3==="+str(order_list.count()))
+        order_list_s = BrandOrderListSerializer(order_list, many=True)
+
+        # order_list_s
+
 
         base_data = {}
         base_data["order"] = order_list_s.data
@@ -720,6 +802,35 @@ class UpdateCategoryDetails(APIView):
 
         return Response(base_data)
 
+class BaGetOrderDetailswithActions(APIView):
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        # phone = received_json_data["user_phone"]
+        # user_p = UserProfileInfo.objects.get(phone_primary=phone)
+
+        id = received_json_data["order_base_id"]
+
+
+
+        base_data = {}
+        order_item = Order.objects.get(id = id)
+        if order_item is not None:
+            order_list_s = OrderDetail01SerializerWithActions(order_item, many=False)
+            base_data["order"] = order_list_s.data
+        else:
+            base_data["order"] = None
+
+
+        base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
+        base_data["status_text"] = "RECEIVED"
+
+        return Response(base_data)
+
 class GetOrderDetails01(APIView):
 
     def post(self,request):
@@ -746,6 +857,31 @@ class GetOrderDetails01(APIView):
 
         base_data["delivery_text"] = "Order will bw delivered by 11 AM tomorrow"
         base_data["status_text"] = "RECEIVED"
+
+        return Response(base_data)
+
+class GetOrderAgentResponse(APIView):
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+        print("reee")
+        print(received_json_data)
+
+        # phone = received_json_data["user_phone"]
+        # user_p = UserProfileInfo.objects.get(phone_primary=phone)
+
+        id = received_json_data["order_base_id"]
+
+
+
+        base_data = {}
+        order_item = Order.objects.get(id = id)
+        if order_item is not None:
+            order_list_s = OrderAgentResponseSerializer(order_item, many=False)
+            base_data["order"] = order_list_s.data
+        else:
+            base_data["order"] = None
 
         return Response(base_data)
 
@@ -832,7 +968,7 @@ class OrderAcceptedByAgent(APIView):
             # OrderRejectedByAgent
             proceed_client_approval_notification(order_base_id)
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":"Order Marked as Accepted"}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
         return Response(base_data)
 
 
@@ -867,7 +1003,41 @@ class OrderRejectedByAgent(APIView):
             proceed_client_approval_notification(order_base_id)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":"Order Marked as Rejected"}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
+        return Response(base_data)
+
+class OrderRejectedByAgent(APIView):
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+
+
+        print("reee")
+        print(received_json_data)
+
+        order_base_id = received_json_data["order_base_id"]
+
+
+
+        order_status_q= db_operations_support.get_db_object_g(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT})
+
+        order_dataset = {}
+
+        order_dataset["id"] = order_base_id
+        order_dataset["order_status"] = order_status_q.id
+
+        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(Order, order_dataset)
+
+        if proceed_current_process_model == False:
+            print("error savin")
+            print(serializer_current_process_model.errors)
+
+        if proceed_current_process_model:
+            # OrderRejectedByAgent
+            proceed_client_approval_notification(order_base_id)
+
+
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
         return Response(base_data)
 
 def proceed_client_approval_notification(order_base_id):
@@ -878,14 +1048,22 @@ def proceed_client_approval_notification(order_base_id):
     }
     order_q = db_operations_support.get_db_object_g(Order, {"id": order_base_id})
     reg_id = order_q.user_customer.device_token
-    proceedPush(GEN_Constants.APP_USER_TYPE_CUSTOMER, reg_id, "Sample Title", "dummy", data_set)
+
+    title =get_string_value_by_user(value_constant.KEY_D_BOOKING_NOT_CONFIRMED)
+    message = get_string_value_by_user(value_constant.KEY_D_TAP_TO_VIEW_DETAILS)
+
+    if order_q.order_status.code == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
+        title =get_string_value_by_user(value_constant.KEY_D_BOOKING_CONFIRMED)
+
+
+
+    proceedPush(GEN_Constants.APP_USER_TYPE_CUSTOMER, reg_id, title, message, data_set)
 
 
 class OrderMarkAsCompleted(APIView):
 
-    def post(self,request):
+    def post(self, request):
         received_json_data=json.loads(request.body)
-
 
         print("reee")
         print(received_json_data)
@@ -908,7 +1086,7 @@ class OrderMarkAsCompleted(APIView):
             print(serializer_current_process_model.errors)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":"Order Marked as Rejected"}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
         return Response(base_data)
 
 class OrderMarkAsCheckedIn(APIView):
@@ -939,7 +1117,7 @@ class OrderMarkAsCheckedIn(APIView):
             print(serializer_current_process_model.errors)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":"Order Marked as Rejected"}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
         return Response(base_data)
 
 
@@ -956,7 +1134,7 @@ class CustomerOrder(APIView):
 
 
 
-        order_list = Order.objects.filter(user_customer = user_p).order_by('-updated_at')
+        order_list = Order.objects.filter(user_customer__id = user_p.id).order_by('-updated_at')
         order_list_s = CustomerAllOrderSerializer(order_list, many=True)
 
 
@@ -1204,8 +1382,8 @@ def submit_symptoms(request):
     # print("sypmtont");
     # print("sypmtont=="+str(symptom_total));
 
-    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Status updated"}),
-    content_type="application/json")
+    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_SAVED_SUCCESSFULLY)}),
+                        content_type="application/json")
 
 
 
@@ -1374,12 +1552,12 @@ class CreateOrder(APIView):
 
         if order_base_id != -1:
             update_order_request_to_branch_user(order_base_id)
-        return proceed_current_process_model, {"title": "Booking Failed", "message": "Please try after some time."}
+        return proceed_current_process_model, {"title":get_string_value_by_user(value_constant.KEY_D_BOOKING_FAILED), "message":get_string_value_by_user(value_constant.KEY_D_PLEASE_TRY_AFTER_SOME_TIME)}
 
     def proceed_validation(self, received_json_data):
 
         proceed_current_process_model = True
-        payload = {"title":"Successful", "message":"Booking Request Successful.Please wait for confirmation"}
+        payload = {"title":get_string_value_by_user(value_constant.KEY_D_SUCCESSFUL), "message":get_string_value_by_user(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION)}
 
         order_data_set = received_json_data["order"]
         time_str = order_data_set["slot_time"]
@@ -1395,7 +1573,7 @@ class CreateOrder(APIView):
 
         if(servicable_criteria_q.count() == 0):
             proceed_current_process_model = False
-            payload = {"title": "Booking Failed", "message": "Branch not operational at selected time. Please try choosing some other time."}
+            payload = {"title":get_string_value_by_user(value_constant.KEY_D_BOOKING_FAILED), "message":get_string_value_by_user(value_constant.KEY_D_BRANCH_OPERATIONAL_SELECTE_TIME)}
 
 
 
@@ -1420,8 +1598,8 @@ class CreateOrder(APIView):
 
             if(filled_capacity >= store_capacity):
                 proceed_current_process_model = False
-                payload = {"title": "Booking Failed",
-                           "message": "Selected time is booked. Please try choosing some other time."}
+                payload = {"title":get_string_value_by_user(value_constant.KEY_D_BOOKING_FAILED),
+                           "message":get_string_value_by_user(value_constant.KEY_D_SELECTE_BOOKING_TIMING)}
 
         return proceed_current_process_model, payload
 
@@ -1433,7 +1611,7 @@ class CreateOrder(APIView):
             proceed_current_process_model, payload  = self.proceed_save(received_json_data)
 
         if proceed_current_process_model:
-            payload = {"title": "Successful", "message": "Booking Request Successful.Please wait for confirmation"}
+            payload = {"title":get_string_value_by_user(value_constant.KEY_D_SUCCESSFUL), "message":get_string_value_by_user(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION)}
             return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":payload}),
                 content_type="application/json")
         else:
@@ -1448,6 +1626,8 @@ class CreateOrder(APIView):
 def order_create_m(request):
 
     if request.method == "POST":
+
+        print("camwww000000000000000000000001")
 
         #
         received_json_data = json.loads(request.body)
@@ -1521,12 +1701,15 @@ def order_create_m(request):
 
                     print(serializer_current_process_model.errors)
 
+        print("camwww000000000000000000000002")
         if order_base_id != -1:
             update_order_request_to_branch_user(order_base_id)
         if proceed_current_process_model:
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Order Placed Successfully"}),
+            print("camwww000000000000000000000003")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY)}),
                 content_type="application/json")
         else:
+            print("camwww000000000000000000000004")
             return HttpResponse(
                 json.dumps({"SUCCESS": False, "RESPONSE_MESSAGE": "Error", "ERROR": order_item_form.errors}),
                 content_type="application/json")
@@ -1625,16 +1808,18 @@ def update_order_request_to_branch_user(order_base_id):
     order_q = db_operations_support.get_db_object_g_last(Order, {"id": order_base_id})
 
     if order_q is not None:
-        branch_id = order_q.brand.id
+        brand_id = order_q.brand.id
+        branch_id = order_q.branch.id
         order_id = order_q.id
         print("order exist")
         print(branch_id)
         branch_agents_q = db_operations_support.get_db_object_g_list(UserProfileInfo, {"brandbranch__id": branch_id, "app_user_type__code":GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, "is_available":True})
-        data_payload =  {"app_user_type" : "USR_BAGENT", "push_type" : "SCHEDULE_REQUEST", "order_id" : order_id}
+        # branch_agents_q = db_operations_support.get_db_object_g_list(UserProfileInfo, {"brandbranch__id": branch_id, "app_user_type__code":GEN_Constants.APP_USER_TYPE_BRANCH_AGENT})
+        data_payload =  {"app_user_type" : GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, "push_type" : "SCHEDULE_REQUEST", "order_id" : order_id}
         for e_branch_agent in branch_agents_q:
-            print("eachu")
+            print("eachua")
             print(e_branch_agent.phone_primary)
-            proceedPush(GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, e_branch_agent.device_token, "title", "message", data_payload)
+            proceedPush(GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, e_branch_agent.device_token,get_string_value_by_user(value_constant.KEY_D_NEW_REQUEST), get_string_value_by_user(value_constant.KEY_D_NEW_BOOKING_REQUEST_VIEW_DETAILS), data_payload)
 
 
 
@@ -1735,7 +1920,7 @@ def order_create_m1(request):
                         order_item_log.order_item = order_item
                         order_item_log.save()
                     #
-                    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Order Placed Successfully"}),
+                    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY)}),
                         content_type="application/json")
                     #     return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Order Placed Successfully"}),
                     #         content_type="application/json")
@@ -1762,7 +1947,7 @@ def order_create_m1(request):
                 order_log.order = order
                 order_log.save()
 
-                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Order Placed Successfully"}),
+                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY)}),
                     content_type="application/json")
 
                 # print(item)
@@ -1978,7 +2163,7 @@ def authenticate_app_user(request):
                 user_data["brand_branch_id"] = -1
             user_profile.device_token = device_token
             user_profile.save()
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA": user_data, "RESPONSE_MESSAGE":"Login Successful"}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA": user_data, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_LOGIN_SUCCESSFUL)}), content_type="application/json")
 
 @csrf_exempt
 def validate_user(request):
@@ -2153,7 +2338,7 @@ def register_business_agent(request):
             #     print(profile_form.errors)
             #     return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"Error", "ERROR":profile_form.errors} ), content_type="application/json")
 
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"User Created SUccessfully"}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY)}), content_type="application/json")
         else:
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User2 already Exist"}), content_type="application/json")
     else:
@@ -2267,7 +2452,7 @@ def RegisterAgent(request):
                 print(profile_form.errors)
                 return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"Error", "ERROR":profile_form.errors} ), content_type="application/json")
 
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"User Created SUccessfully"}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY)}), content_type="application/json")
         else:
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User2 already Exist"}), content_type="application/json")
     else:
@@ -2312,8 +2497,16 @@ def register_user(request):
             if "user_language" in received_json_data:
                 user_data["user_language"] = received_json_data["user_language"]
 
-            user_data["location_area"] = received_json_data["location_area"]
 
+
+            if "location_area" in received_json_data:
+                if received_json_data["location_area"] != "":
+                    user_data["location_area"] = received_json_data["location_area"]
+                else:
+                    user_data["location_area"] = "NOT AVAILABLE"
+
+            else:
+                user_data["location_area"] = "NOT AVAILABLE"
 
             if "location_sublocality" in received_json_data:
                 if received_json_data["location_sublocality"] != "":
@@ -2339,12 +2532,15 @@ def register_user(request):
             else:
                 user_data["location_city"] = "NONE"
 
-            user_data["location_state"] = received_json_data["location_state"]
+            # user_data["location_state"] = received_json_data["location_state"]
+            user_data["location_state"] = "NONE"
 
             user_data["location_pincode"] = received_json_data["pincode"]
 
-            user_data["location_latitude"] = received_json_data["location_latitude"]
-            user_data["location_longitude"] = received_json_data["location_longitude"]
+            user_data["location_latitude"] = 0.0
+            user_data["location_longitude"] = 0.0
+            # user_data["location_latitude"] = received_json_data["location_latitude"]
+            # user_data["location_longitude"] = received_json_data["location_longitude"]
 
 
             user_data["age"] = received_json_data["age"]
@@ -2394,13 +2590,14 @@ def register_user(request):
 
             else:
                 print("errorsa")
+                print(profile_form.errors)
                 print(user_form.errors)
                 return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_DATA":user_data, "RESPONSE_MESSAGE":"Error", "ERROR":profile_form.errors} ), content_type="application/json")
 
             # print(profile_form.errors)
             response_data["id"] = profile.id
 
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA":response_data, "RESPONSE_MESSAGE":"User Created SUccessfully"}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA":response_data, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY)}), content_type="application/json")
         else:
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User2 already Exist"}), content_type="application/json")
     else:
@@ -2722,7 +2919,7 @@ def get_paginated_data(queyset, page_no, page_size = 4):
     # size = queyset.count()
     end = page_no * page_size+1
     start = end-page_size
-    queryset = queyset[start:end]
+    queryset = queyset[start-1:end]
     return queryset
 
 
@@ -3431,7 +3628,7 @@ def appendServerPath(relative_path):
     return GEN_Constants.SERVER_PREFIX+"media/"+a
 
 def user_login(request):
-    return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"INVALID DATA", "ERRORS": {}}),
+    return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_INVALID_DATA), "ERRORS": {}}),
     content_type="application/json")
 
 def get_html_privacy_policy(request):
@@ -3460,19 +3657,19 @@ def user_login(request):
             if user.is_active:
                 print('active')
                 auth_login(request,user)
-                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Login successful"}),
+                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_LOGIN_SUCCESSFUL)}),
                 content_type="application/json")
 
 
                 # return HttpResponseRedirect(reverse('base_app:index'))
             else:
-                errors_dict = {"DATA":"Not a valid data"}
+                errors_dict = {"DATA":get_string_value_by_user(value_constant.KEY_D_NOT_INVALID_DATA)}
                 return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"2INVALID DATA", "ERRORS": errors_dict}),
                 content_type="application/json")
 
         else:
-            errors_dict = {"DATA":"Not a valid data"}
-            return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"INVALID DATA", "ERRORS": errors_dict}),
+            errors_dict = {"DATA":get_string_value_by_user(value_constant.KEY_D_NOT_INVALID_DATA)}
+            return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_INVALID_DATA), "ERRORS": errors_dict}),
             content_type="application/json")
 
     else:

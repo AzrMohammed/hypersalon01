@@ -212,6 +212,8 @@ DAY_THU = 4
 DAY_FRI = 5
 DAY_SAT = 6
 DAY_SUN = 7
+
+
 DAY_OF_WEEK_LIST = [
 (DAY_NONE, "None"),
 (DAY_MON, "Monday"),
@@ -224,3 +226,6 @@ DAY_OF_WEEK_LIST = [
 ]
 
 DAY_OF_WEEK_LIST_DICT = dict(PRIORITY_LIST)
+
+
+USER_ID_DEFAULT = -1

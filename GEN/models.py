@@ -12,7 +12,8 @@ from GEN import GEN_Constants
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir)
-from GEN import dbconstants
+from GEN import dbconstants,value_constant
+from .value_constant import get_string_value_by_user
 
 import element_types
 
@@ -128,6 +129,9 @@ class BrandBranchBasicInfo(models.Model):
     is_available = models.BooleanField(default=True)
     is_online = models.BooleanField(default=True)
 
+    def get_branch_display_details(self):
+        return  { "branch_title":self.name, "branch_address":self.description}
+
     def __str__(self):
         return str(self.name) + " | " + str(self.id)
 
@@ -238,8 +242,55 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def get_status_title(self):
+        status =get_string_value_by_user(value_constant.KEY_D_PENDING_APPROVAL)
+
+        if self.order_status and hasattr(self.order_status, 'code'):
+            order_status = self.order_status.code
+
+            if order_status == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
+                status = get_string_value_by_user(value_constant.KEY_D_ORDER_APPROVED)
+            elif order_status == GEN_Constants.ORDER_STATUS_INITIATED:
+                status = get_string_value_by_user(value_constant.KEY_D_PENDING_APPROVAL)
+            elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT:
+                status = get_string_value_by_user(value_constant.KEY_D_ORDER_REJECTED)
+            elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_OTHERS:
+                status = get_string_value_by_user(value_constant.KEY_D_ORDER_REJECTED)
+            elif order_status == GEN_Constants.ORDER_STATUS_NO_SHOW:
+                status = get_string_value_by_user(value_constant.KEY_D_NOT_REACHABLE)
+            elif order_status == GEN_Constants.ORDER_STATUS_ONGOING:
+                status = get_string_value_by_user(value_constant.KEY_D_ONGOING)
+            elif order_status == GEN_Constants.ORDER_STATUS_COMPLETED:
+                status = get_string_value_by_user(value_constant.KEY_D_COMPLETED)
+
+        return status
+
+    def get_status_text(self):
+
+        status = get_string_value_by_user(value_constant.KEY_D_PENDING_APPROVAL);
+        if self.order_status and hasattr(self.order_status, 'code'):
+            order_status = self.order_status.code
+
+            if order_status == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
+                status = get_string_value_by_user(value_constant.KEY_D_SHOW_THE_QR_CODE_CHECK_IN)
+            elif order_status == GEN_Constants.ORDER_STATUS_INITIATED:
+                status = get_string_value_by_user(value_constant.KEY_D_AGENT_APPROVE)
+            elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT:
+                status = get_string_value_by_user(value_constant.KEY_D_NO_SLOT_AVAILABLE)
+            elif order_status == GEN_Constants.ORDER_STATUS_AGENT_REJECTED_OTHERS:
+                status = get_string_value_by_user(value_constant.KEY_D_NOT_OPERATING_REQUESTED_TIME)
+            elif order_status == GEN_Constants.ORDER_STATUS_NO_SHOW:
+                status = get_string_value_by_user(value_constant.KEY_D_CHECK_IN_APPOINTMENT)
+            elif order_status == GEN_Constants.ORDER_STATUS_ONGOING:
+                status = get_string_value_by_user(value_constant.KEY_D_APPOINTMENT_MARKED_AS_ONGOING)
+            elif order_status == GEN_Constants.ORDER_STATUS_COMPLETED:
+                status = get_string_value_by_user(value_constant.KEY_D_BOOKING_MARKED_AS_COMPLETED)
+
+        return status
+
+
     def __str__(self):
-        return str(self.order_id)
+        return str(self.order_id) +"==="+ str(self.order_status)+"==="+str(self.branch.id)
 
 
 class ProductCategory(models.Model):
