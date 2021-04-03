@@ -1,10 +1,22 @@
 from rest_framework import serializers
 from GEN import dbconstants, GEN_Constants,value_constant
-from .value_constant import get_string_value_by_user
-from .models import UserProfileInfo, CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, ProductCategory, \
-    Product, ProductBase, ItemMeasuementUnit, OrderItem, C19SymptomSet, UserHealthProfile, Order, BrandBranchBasicInfo, \
+from .value_constant import get_display_translated_value
+from .models import UserProfileInfo, CMN_CommunicationVirtualModel, CMN_CommunicationPhysicalModel, ProductCategory,\
+    Product, ProductBase, ItemMeasuementUnit, OrderItem, C19SymptomSet, UserHealthProfile, Order, BrandBranchBasicInfo,\
     BranchServisableCategory, BranchServisableProductBase, BranchServisableProduct, ServisableDaysCriteria
 
+
+# def get_language_preferrence(self, obj):
+#     try:
+#         if "language" in get_display_translated_value:
+#             if self.context["language"] == value_constant.KEY_LANGUAGE_TA:
+#                 return value_constant.KEY_LANGUAGE_TA
+#             else:
+#                 return value_constant.KEY_LANGUAGE_EN
+#         return value_constant.KEY_LANGUAGE_EN
+#     except:
+#         return value_constant.KEY_LANGUAGE_EN
+# 
 
 
 class ProductSuggestionListSerializer(serializers.ModelSerializer):
@@ -176,16 +188,17 @@ class OrderDetail01SerializerWithActions(serializers.ModelSerializer):
 
 
     def get_can_accept(self, obj):
-        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
+        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
 
     def get_can_complete_service(self, obj):
-        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_COMPLETE_REQUEST), "SHOW_MESSAGE":False}
+        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_COMPLETE_REQUEST), "SHOW_MESSAGE":False}
 
     def get_can_complete_service(self, obj):
-        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
+
+        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
 
     def get_can_checkin(self, obj):
-        return {"STATUS":True, "MESSAGE":get_string_value_by_user(value_constant.KEY_D_CAN_CHECKIN), "SHOW_MESSAGE":False}
+        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_CHECKIN), "SHOW_MESSAGE":False}
         # return {"STATUS":False, "MESSAGE":"Checkin Timeout", "SHOW_MESSAGE":False}
 
     def get_requested_time(self, obj):
@@ -234,8 +247,8 @@ class OrderAgentResponseSerializer(serializers.ModelSerializer):
         response = {"status": False, "status_title":"Booking Not Confirmed", "status_text":"Booking has not been confirmed on requested time. Please try scheduling on some other time" }
         if obj.order_status is not None:
             if obj.order_status.code == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
-                response = {"status": True, "status_title":get_string_value_by_user(value_constant.KEY_D_BOOKING_CONFIRMED),
-                            "status_text":get_string_value_by_user(value_constant.KEY_D_BOOKING_SCHEDULED_REQUEST_TIME)}
+                response = {"status": True, "status_title":get_display_translated_value(value_constant.KEY_D_BOOKING_CONFIRMED),
+                            "status_text":get_display_translated_value(value_constant.KEY_D_BOOKING_SCHEDULED_REQUEST_TIME)}
         return  response
 
 
@@ -609,10 +622,11 @@ class ProductADFeedSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     product_id = serializers.SerializerMethodField()
     category = serializers.SerializerMethodField()
+    category_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', "product_id", 'pic', 'category', 'name', 'name_tamil', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'slug', 'priority', 'product_base', 'measurement_unit', 'is_available']
+        fields = ['id', "product_id", 'pic', 'category', 'category_name', 'name', 'name_tamil', 'sub_text', 'description', 'base_measurement_unit', 'price', 'show_price', 'status_note', 'slug', 'priority', 'product_base', 'measurement_unit', 'is_available']
         # fields = '__all__'
         depth = 0
 
@@ -621,6 +635,9 @@ class ProductADFeedSerializer(serializers.ModelSerializer):
 
     def get_category(self, obj):
         return obj.product_base.product_category.id
+
+    def get_category_name(self, obj):
+        return obj.product_base.product_category.name
 
     def get_name(self, obj):
         # if self.context["language"] == "ta":

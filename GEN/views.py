@@ -41,7 +41,25 @@ from .serialiserBase import EnterPriseForm, \
 import base64
 from django.core.files.base import ContentFile
 
-from .value_constant import get_string_value_by_user
+from .value_constant import get_display_translated_value
+
+
+
+def get_api_language_preference(received_data):
+
+
+    try:
+        if "lang" in received_data:
+            if received_data["lang"] == value_constant.KEY_LANGUAGE_TA:
+                return value_constant.KEY_LANGUAGE_TA
+            else:
+                return value_constant.KEY_LANGUAGE_EN
+
+        return value_constant.KEY_LANGUAGE_EN
+
+    except:
+        return value_constant.KEY_LANGUAGE_EN
+
 
 
 def get_file_from_base64(b64_string):
@@ -61,7 +79,7 @@ class BrandBranchOrdersOngoing(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -93,7 +111,7 @@ class BrandBranchOrdersPendingApproval(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -128,6 +146,7 @@ class BrandBranchOrdersUpcoming(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("reee")
         print(received_json_data)
@@ -180,7 +199,7 @@ class BrandOrders(APIView):
 
     def post(self, request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
         brand_id = received_json_data["brand_id"]
@@ -239,7 +258,7 @@ class BrandBranchOrders(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -271,7 +290,7 @@ class BrandBranchOrdersFiltered(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -303,7 +322,7 @@ class GetBrandBranchDetailAdmin(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -354,7 +373,7 @@ class CreateProduct(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -424,7 +443,7 @@ class CreateProductCategory(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -517,6 +536,7 @@ class CreateProductCategory(APIView):
 
 class CreateBrandBranch(APIView):
 
+
     def create_product_copy_on_branch(self, brand_id, branch_id):
 
         # copy category
@@ -527,7 +547,9 @@ class CreateBrandBranch(APIView):
         proceed_current_process_model = False
         serializer_current_process_model = {"test":"error"}
 
-        print(brand_id, branch_id)
+
+
+        # print(brand_id, branch_id)
         for e_ProductCategory in ProductCategory_q:
             print("eact cat")
 
@@ -577,27 +599,46 @@ class CreateBrandBranch(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
         BrandBranchBasicInfo_dataset = received_json_data["store_basic"]
 
+        response_text_failure = "Details Updation Failed"
+
         is_create = True
 
-        if "id" in BrandBranchBasicInfo_dataset:
-            is_create = False
+
 
         current_process_model_data = BrandBranchBasicInfo_dataset
         current_process_model = BrandBranchBasicInfo
+        proceed_current_process_model = True
 
-        branch_image_file = None
-        if "branch_image" in BrandBranchBasicInfo_dataset:
-            # branch_image_file = get_file_from_base64("data:image/jpeg;base64,"+BrandBranchBasicInfo_dataset["branch_image"])
-            branch_image_file = "data:image/jpeg;base64,"+BrandBranchBasicInfo_dataset["branch_image"]
-            del BrandBranchBasicInfo_dataset["branch_image"]
+        if "id" in BrandBranchBasicInfo_dataset:
+            is_create = False
+        else:
+            print("came0000000000000000000000001")
+            place_google_id = BrandBranchBasicInfo_dataset["place_google_id"]
+            brand_id = BrandBranchBasicInfo_dataset["brand"]
+            print("came00000000000000000000000012")
+            if BrandBranchBasicInfo.objects.filter(brand__id = brand_id, place_google_id=place_google_id).count() >0:
+                proceed_current_process_model = False
+                print("came00000000000000000000000013")
+                response_text_failure = "Branch with this address already exist.Please select some other branch from List"
 
-        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+
+        if proceed_current_process_model:
+            branch_image_file = None
+            if "branch_image" in BrandBranchBasicInfo_dataset:
+                # branch_image_file = get_file_from_base64("data:image/jpeg;base64,"+BrandBranchBasicInfo_dataset["branch_image"])
+                branch_image_file = "data:image/jpeg;base64,"+BrandBranchBasicInfo_dataset["branch_image"]
+                del BrandBranchBasicInfo_dataset["branch_image"]
+
+            proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(current_process_model, current_process_model_data)
+
+
 
         if proceed_current_process_model:
             brand_branch_id = serializer_current_process_model["id"]
@@ -617,7 +658,10 @@ class CreateBrandBranch(APIView):
             print(brand_id)
 
             if is_create:
+                response_text_success = "Branch Created Successfully."
                 self.create_product_copy_on_branch(brand_id, brand_branch_id)
+            else:
+                response_text_success = "Branch Details updated Successfully."
 
             for ServisableDaysCriteria_dataset in ServisableDaysCriteria_dataset_arr:
                 current_process_model_data = ServisableDaysCriteria_dataset
@@ -647,14 +691,14 @@ class CreateBrandBranch(APIView):
         # {"SUCCESS": False, "RESPONSE_DATA": base_data}
         base_data = {}
         base_data["SUCCESS"] = False
-        base_data["RESPONSE_MESSAGE"] = "Details Updation Failed"
+        base_data["RESPONSE_MESSAGE"] = response_text_failure
 
         if proceed_current_process_model:
             base_data["SUCCESS"] = True
-            base_data["RESPONSE_MESSAGE"] = "Details Updated Successfully"
+            base_data["RESPONSE_MESSAGE"] = response_text_success
         else:
             print("errorssdd")
-            print("serialisdfff=="+ str(serializer_current_process_model.errors))
+            # print("serialisdfff=="+ str(serializer_current_process_model.errors))
 
         return Response(base_data)
 
@@ -664,7 +708,7 @@ class CreateUpdateDataset(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -698,7 +742,7 @@ class UpdateUserDetails(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -725,7 +769,7 @@ class UpdateServisableCategoryDetails(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -752,7 +796,7 @@ class UpdateServisableProduct(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -779,7 +823,7 @@ class UpdateCategoryDetails(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -806,6 +850,8 @@ class BaGetOrderDetailswithActions(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
+
 
         print("reee")
         print(received_json_data)
@@ -820,7 +866,7 @@ class BaGetOrderDetailswithActions(APIView):
         base_data = {}
         order_item = Order.objects.get(id = id)
         if order_item is not None:
-            order_list_s = OrderDetail01SerializerWithActions(order_item, many=False)
+            order_list_s = OrderDetail01SerializerWithActions(order_item,  many=False)
             base_data["order"] = order_list_s.data
         else:
             base_data["order"] = None
@@ -835,7 +881,7 @@ class GetOrderDetails01(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -864,6 +910,7 @@ class GetOrderAgentResponse(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("reee")
         print(received_json_data)
@@ -905,6 +952,8 @@ def proceedPush(app_user_type, device_id, title, message, datapayload):
 class SamplePush(APIView):
 
     def get(self,request):
+        received_json_data = request.POST
+        api_lang = get_api_language_preference(received_json_data)
 
         f =  FCMDevice()
 
@@ -942,6 +991,7 @@ class OrderAcceptedByAgent(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
 
         print("reee")
@@ -968,7 +1018,7 @@ class OrderAcceptedByAgent(APIView):
             # OrderRejectedByAgent
             proceed_client_approval_notification(order_base_id)
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED,api_lang)}
         return Response(base_data)
 
 
@@ -976,6 +1026,7 @@ class OrderRejectedByAgent(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
 
         print("reee")
@@ -1003,13 +1054,14 @@ class OrderRejectedByAgent(APIView):
             proceed_client_approval_notification(order_base_id)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED,api_lang)}
         return Response(base_data)
 
 class OrderRejectedByAgent(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
 
         print("reee")
@@ -1037,10 +1089,13 @@ class OrderRejectedByAgent(APIView):
             proceed_client_approval_notification(order_base_id)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED,api_lang)}
         return Response(base_data)
 
 def proceed_client_approval_notification(order_base_id):
+
+
+
     data_set = {
         "app_user_type": GEN_Constants.APP_USER_TYPE_CUSTOMER,
         "push_type": "SCHEDULE_RESPONSE",
@@ -1049,11 +1104,11 @@ def proceed_client_approval_notification(order_base_id):
     order_q = db_operations_support.get_db_object_g(Order, {"id": order_base_id})
     reg_id = order_q.user_customer.device_token
 
-    title =get_string_value_by_user(value_constant.KEY_D_BOOKING_NOT_CONFIRMED)
-    message = get_string_value_by_user(value_constant.KEY_D_TAP_TO_VIEW_DETAILS)
+    title =get_display_translated_value(value_constant.KEY_D_BOOKING_NOT_CONFIRMED)
+    message = get_display_translated_value(value_constant.KEY_D_TAP_TO_VIEW_DETAILS)
 
     if order_q.order_status.code == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
-        title =get_string_value_by_user(value_constant.KEY_D_BOOKING_CONFIRMED)
+        title =get_display_translated_value(value_constant.KEY_D_BOOKING_CONFIRMED)
 
 
 
@@ -1064,6 +1119,7 @@ class OrderMarkAsCompleted(APIView):
 
     def post(self, request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("reee")
         print(received_json_data)
@@ -1086,22 +1142,20 @@ class OrderMarkAsCompleted(APIView):
             print(serializer_current_process_model.errors)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_COMPLETED,api_lang)}
         return Response(base_data)
 
 class OrderMarkAsCheckedIn(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
 
         print("reee")
         print(received_json_data)
 
         order_base_id = received_json_data["order_base_id"]
-
-
-
         order_status_q = db_operations_support.get_db_object_g(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_ONGOING})
 
         order_dataset = {}
@@ -1117,7 +1171,7 @@ class OrderMarkAsCheckedIn(APIView):
             print(serializer_current_process_model.errors)
 
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED)}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_CHECKEDIN,api_lang)}
         return Response(base_data)
 
 
@@ -1125,7 +1179,7 @@ class CustomerOrder(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -1150,7 +1204,7 @@ class AgentDetail_AD(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -1171,7 +1225,7 @@ class CustomerOrderUpcoming(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -1197,7 +1251,7 @@ class CustomerOrderOthers(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
-
+        api_lang = get_api_language_preference(received_json_data)
         print("reee")
         print(received_json_data)
 
@@ -1242,6 +1296,7 @@ def get_user_suggestion_list(request):
 @csrf_exempt
 def validate_app(request):
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         print("resssa")
         print(received_json_data)
         # validate_app
@@ -1256,6 +1311,7 @@ def validate_app(request):
 def get_user_details(request):
     # phone = "9080349072"
     received_json_data=request.POST
+    api_lang = get_api_language_preference(received_json_data)
     print("resssa")
     print(received_json_data)
 
@@ -1273,6 +1329,8 @@ def get_user_details(request):
 
 @csrf_exempt
 def product_list_suggestion(request):
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
 
     # received_json_data=json.loads(request.body)
     # #
@@ -1293,7 +1351,7 @@ def product_list_suggestion(request):
 def order_list_user(request):
 
     received_json_data=json.loads(request.body)
-    #
+    api_lang = get_api_language_preference(received_json_data)
     phone = user["phone"]
     # phone = "9080349072"
     user_p = UserProfileInfo.objects.get(phone_primary=phone)
@@ -1315,7 +1373,6 @@ def order_list_user(request):
 
 def getUser(phone):
 
-    received_json_data=json.loads(request.body)
 
     phone = user["phone"]
     user = UserProfileInfo.objects.get(phone_primary=phone)
@@ -1335,7 +1392,7 @@ def feed_news(request):
 def feed_contact(request):
 
     received_json_data=json.loads(request.body)
-
+    api_lang = get_api_language_preference(received_json_data)
     print(received_json_data)
     data = {"SUCCESS": True, "list": [{"card_type": "INFO_NEUTRAL", "data":{"title_text": "Notice", "details_text": "We are providing only the basic essentials because of the COVID19 situation. All the ondemand supplies will be provided up on order once the situation is over.", "bg_color": "#e58a8a"}}, {"card_type": "TITLE", "data": {"title_text": "Order From Home Details"}}, {"card_type": "PHONE", "data": {"title": "Ramesh", "sub_title": "Business Agent", "phone": [8144485556], "photo": "http://206.189.129.128:8000/media/profile_pics/user.png"}}]}
     # {"SUCCESS": True, "list": [{"card_type": "INFO_NEUTRAL", "data":{"title_text": "Notice", "details_text": "We are providing only the basic essentials because of the COVID19 situation. All the ondemand supplies will be provided up on order once the situation is over.", "bg_color": "#e58a8a"}}, {"card_type": "TITLE", "data": {"title_text": "Order From Home Details"}}, {"card_type": "PHONE", "data": {"title": "Mr. Manigandan G", "sub_title": "Delivery Agent", "phone": [9080349072, 9020453454], "photo": "http://206.189.129.128:8000/media/profile_pics/user.png"}}, {"card_type": "PHONE", "data": {"title": "Mr. Rahu G", "sub_title": "Business Agent", "phone": [9080349072, 9020453454], "photo": "http://192.168.0.106:8000/media/profile_pics/user.png"}}, {"card_type": "SUB_TITLE", "data": {"title_text": "COVID19 STATUS"}}, {"card_type": "ARTICLE", "data": {"title": "Coronavirus in Tamil", "sub_title": "Dr. V Ramasubramanian | Apollo Hospitals", "URL": "https://www.youtube.com/watch?v=ZezntM6IAvU", "cover_photo": "http://206.189.129.128:8000/media/profile_pics/maxresdefault.jpg"}}]}
@@ -1346,6 +1403,7 @@ def feed_contact(request):
 def submit_symptoms(request):
 
     received_json_data=json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
 
     print(received_json_data)
 
@@ -1382,7 +1440,7 @@ def submit_symptoms(request):
     # print("sypmtont");
     # print("sypmtont=="+str(symptom_total));
 
-    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_SAVED_SUCCESSFULLY)}),
+    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_SAVED_SUCCESSFULLY,api_lang)}),
                         content_type="application/json")
 
 
@@ -1390,6 +1448,8 @@ def submit_symptoms(request):
 
 @csrf_exempt
 def change_user_status(request):
+    received_json_data = request.POST
+    api_lang = get_api_language_preference(received_json_data)
 
     print("came changestat")
     username = request.POST['username']
@@ -1480,6 +1540,7 @@ class CreateOrder(APIView):
 
 
     def proceed_save(self, received_json_data):
+        api_lang = get_api_language_preference(received_json_data)
 
         user_data_set = received_json_data["user"]
         order_data_set = received_json_data["order"]
@@ -1552,12 +1613,14 @@ class CreateOrder(APIView):
 
         if order_base_id != -1:
             update_order_request_to_branch_user(order_base_id)
-        return proceed_current_process_model, {"title":get_string_value_by_user(value_constant.KEY_D_BOOKING_FAILED), "message":get_string_value_by_user(value_constant.KEY_D_PLEASE_TRY_AFTER_SOME_TIME)}
+        return proceed_current_process_model, {"title":get_display_translated_value(value_constant.KEY_D_BOOKING_FAILED,api_lang), "message":get_display_translated_value(value_constant.KEY_D_PLEASE_TRY_AFTER_SOME_TIME,api_lang)}
 
     def proceed_validation(self, received_json_data):
 
+        api_lang = get_api_language_preference(received_json_data)
+
         proceed_current_process_model = True
-        payload = {"title":get_string_value_by_user(value_constant.KEY_D_SUCCESSFUL), "message":get_string_value_by_user(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION)}
+        payload = {"title":get_display_translated_value(value_constant.KEY_D_SUCCESSFUL,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION,api_lang)}
 
         order_data_set = received_json_data["order"]
         time_str = order_data_set["slot_time"]
@@ -1573,7 +1636,7 @@ class CreateOrder(APIView):
 
         if(servicable_criteria_q.count() == 0):
             proceed_current_process_model = False
-            payload = {"title":get_string_value_by_user(value_constant.KEY_D_BOOKING_FAILED), "message":get_string_value_by_user(value_constant.KEY_D_BRANCH_OPERATIONAL_SELECTE_TIME)}
+            payload = {"title":get_display_translated_value(value_constant.KEY_D_BOOKING_FAILED,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BRANCH_OPERATIONAL_SELECTE_TIME,api_lang)}
 
 
 
@@ -1598,20 +1661,21 @@ class CreateOrder(APIView):
 
             if(filled_capacity >= store_capacity):
                 proceed_current_process_model = False
-                payload = {"title":get_string_value_by_user(value_constant.KEY_D_BOOKING_FAILED),
-                           "message":get_string_value_by_user(value_constant.KEY_D_SELECTE_BOOKING_TIMING)}
+                payload = {"title":get_display_translated_value(value_constant.KEY_D_BOOKING_FAILED,api_lang),
+                           "message":get_display_translated_value(value_constant.KEY_D_SELECTE_BOOKING_TIMING,api_lang)}
 
         return proceed_current_process_model, payload
 
     def post(self,request):
 
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         proceed_current_process_model, payload  = self.proceed_validation(received_json_data)
         if proceed_current_process_model:
             proceed_current_process_model, payload  = self.proceed_save(received_json_data)
 
         if proceed_current_process_model:
-            payload = {"title":get_string_value_by_user(value_constant.KEY_D_SUCCESSFUL), "message":get_string_value_by_user(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION)}
+            payload = {"title":get_display_translated_value(value_constant.KEY_D_SUCCESSFUL,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION,api_lang)}
             return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":payload}),
                 content_type="application/json")
         else:
@@ -1631,6 +1695,7 @@ def order_create_m(request):
 
         #
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         user_data_set = received_json_data["user"]
         order_data_set = received_json_data["order"]
@@ -1706,7 +1771,7 @@ def order_create_m(request):
             update_order_request_to_branch_user(order_base_id)
         if proceed_current_process_model:
             print("camwww000000000000000000000003")
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY)}),
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY,api_lang)}),
                 content_type="application/json")
         else:
             print("camwww000000000000000000000004")
@@ -1803,8 +1868,11 @@ def order_create_m(request):
 #                 content_type="application/json")
 
 def update_order_request_to_branch_user(order_base_id):
+    # received_json_data = json.loads(request.body)
+    # api_lang = get_api_language_preference(received_json_data)
     print("recc-id")
     print(order_base_id)
+
     order_q = db_operations_support.get_db_object_g_last(Order, {"id": order_base_id})
 
     if order_q is not None:
@@ -1819,7 +1887,7 @@ def update_order_request_to_branch_user(order_base_id):
         for e_branch_agent in branch_agents_q:
             print("eachua")
             print(e_branch_agent.phone_primary)
-            proceedPush(GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, e_branch_agent.device_token,get_string_value_by_user(value_constant.KEY_D_NEW_REQUEST), get_string_value_by_user(value_constant.KEY_D_NEW_BOOKING_REQUEST_VIEW_DETAILS), data_payload)
+            proceedPush(GEN_Constants.APP_USER_TYPE_BRANCH_AGENT, e_branch_agent.device_token,get_display_translated_value(value_constant.KEY_D_NEW_REQUEST), get_display_translated_value(value_constant.KEY_D_NEW_BOOKING_REQUEST_VIEW_DETAILS), data_payload)
 
 
 
@@ -1834,9 +1902,10 @@ def order_create_m1(request):
 
         #
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         print("resssa")
         print(received_json_data)
-        print(eeeesss)
+        # print(eeeesss)
         # received_json_data={"user":{"phone":9629283679,"location_lat":12.45345345,"location_long":12.98098098,"land_mark":"Near Ayyapan temple"},"item_list":[{"product_id":15, "uom_id":2,"quantity":5 },{"product_id":2, "uom_id":1,"quantity":5 }]}
 
         user = received_json_data["user"]
@@ -1920,7 +1989,7 @@ def order_create_m1(request):
                         order_item_log.order_item = order_item
                         order_item_log.save()
                     #
-                    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY)}),
+                    return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY,api_lang)}),
                         content_type="application/json")
                     #     return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":"Order Placed Successfully"}),
                     #         content_type="application/json")
@@ -1947,7 +2016,7 @@ def order_create_m1(request):
                 order_log.order = order
                 order_log.save()
 
-                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY)}),
+                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_PLACED_SUCCESSFULLY,api_lang)}),
                     content_type="application/json")
 
                 # print(item)
@@ -1979,6 +2048,7 @@ def order_create(request):
 
         # json.loads(request.body)
         received_json_data=request.POST
+        api_lang = get_api_language_preference(received_json_data)
         print("resssa")
         print(received_json_data)
 
@@ -2093,8 +2163,8 @@ def order_create(request):
 
 @csrf_exempt
 def change_product_status(request):
-
-
+    received_json_data = request.POST
+    api_lang = get_api_language_preference(received_json_data)
     print(request.POST)
 
     product_id = request.POST['product_id']
@@ -2125,6 +2195,7 @@ def authenticate_app_user(request):
     if request.method == "POST":
 
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("recdd")
         print(received_json_data)
@@ -2163,7 +2234,7 @@ def authenticate_app_user(request):
                 user_data["brand_branch_id"] = -1
             user_profile.device_token = device_token
             user_profile.save()
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA": user_data, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_LOGIN_SUCCESSFUL)}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA": user_data, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_LOGIN_SUCCESSFUL,api_lang)}), content_type="application/json")
 
 @csrf_exempt
 def validate_user(request):
@@ -2171,6 +2242,7 @@ def validate_user(request):
     if request.method == "POST":
 
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("recdd")
         print(received_json_data)
@@ -2219,7 +2291,8 @@ def validate_user(request):
 def change_order_status(request):
 
     print("camemee")
-
+    received_json_data = request.POST
+    api_lang = get_api_language_preference(received_json_data)
     orderid = request.POST['order_id']
     orderstatus = request.POST['order_status']
 
@@ -2245,6 +2318,7 @@ def register_business_agent(request):
     if request.method == "POST":
 
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         phone = received_json_data["phone"]
         name = received_json_data["name"]
@@ -2338,7 +2412,7 @@ def register_business_agent(request):
             #     print(profile_form.errors)
             #     return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"Error", "ERROR":profile_form.errors} ), content_type="application/json")
 
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY)}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY,api_lang)}), content_type="application/json")
         else:
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User2 already Exist"}), content_type="application/json")
     else:
@@ -2354,6 +2428,7 @@ def RegisterAgent(request):
     if request.method == "POST":
 
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         phone = received_json_data["phone"]
         name = received_json_data["name"]
@@ -2452,7 +2527,7 @@ def RegisterAgent(request):
                 print(profile_form.errors)
                 return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"Error", "ERROR":profile_form.errors} ), content_type="application/json")
 
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY)}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY,api_lang)}), content_type="application/json")
         else:
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User2 already Exist"}), content_type="application/json")
     else:
@@ -2464,6 +2539,7 @@ def register_user(request):
     if request.method == "POST":
 
         received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         phone = received_json_data["phone"]
         name = received_json_data["name"]
@@ -2597,7 +2673,7 @@ def register_user(request):
             # print(profile_form.errors)
             response_data["id"] = profile.id
 
-            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA":response_data, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY)}), content_type="application/json")
+            return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_DATA":response_data, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_USER_CREATED_SUCCESSFULLY,api_lang)}), content_type="application/json")
         else:
             return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"User2 already Exist"}), content_type="application/json")
     else:
@@ -2719,6 +2795,8 @@ class SymptomSet(APIView):
 class StoreBranchListAdmin(APIView):
 
     def post(self,request):
+        received_json_data = request.POST
+        api_lang = get_api_language_preference(received_json_data)
         print(":cameggg");
 
         category = BrandBranchBasicInfo.objects.all()
@@ -2759,6 +2837,7 @@ class BranchAgentList(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         brand_id = received_json_data["brand_id"]
         brand_branch_id = received_json_data["brand_branch_id"]
@@ -2782,6 +2861,7 @@ class BranchProductListCustomer1(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         branch_id = received_json_data["branch_id"]
         print(":cameggg");
@@ -2826,6 +2906,7 @@ class BranchProductListCustomer1(APIView):
 class BranchProductSupportDataCustomer(APIView):
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         brand_id = received_json_data["brand_id"]
         branch_id = received_json_data["branch_id"]
@@ -2863,6 +2944,7 @@ class BranchProductListCustomer(APIView):
     def post(self,request):
 
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         brand_id = received_json_data["brand_id"]
         branch_id = received_json_data["branch_id"]
         category_id = received_json_data["category_id"]
@@ -2893,6 +2975,7 @@ class BranchProductListAdmin2(APIView):
     def post(self,request):
 
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         brand_id = received_json_data["brand_id"]
 
         category_id = received_json_data["category_id"]
@@ -2978,6 +3061,7 @@ class BranchProductListAdmin(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         branch_id = received_json_data["branch_id"]
         print(":cameggg");
@@ -3028,6 +3112,7 @@ class BrandProductListAdmin(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         brand_id = received_json_data["brand_id"]
         print(":cameggg");
@@ -3073,6 +3158,7 @@ class BranchProductListServisableCategorySpecific(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         servisable_category_id = received_json_data["servisable_category_id"]
         branch_id = received_json_data["branch_id"]
@@ -3118,6 +3204,7 @@ class BranchProductListServisableCategorySpecificDisabled(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         servisable_category_id = received_json_data["servisable_category_id"]
         branch_id = received_json_data["branch_id"]
@@ -3163,8 +3250,8 @@ class BranchProductListServisableCategorySpecificDisabled(APIView):
 class StoreCategoryListAd(APIView):
 
     def post(self,request):
-
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("recc sss")
         print(received_json_data)
@@ -3193,8 +3280,8 @@ class StoreCategoryListAd(APIView):
 class StoreUomList(APIView):
 
     def post(self,request):
-
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("recc sss")
         print(received_json_data)
@@ -3223,8 +3310,8 @@ class StoreUomList(APIView):
 class StoreCategoryList(APIView):
 
     def post(self,request):
-
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
 
         print("recc sss")
         print(received_json_data)
@@ -3296,6 +3383,7 @@ class ProductList(APIView):
 
     def post(self,request):
         received_json_data = json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
         #
         phone = received_json_data["user_phone"]
         print(":cameggg");
@@ -3387,7 +3475,8 @@ class ProductList(APIView):
 # def get_products(request):
 
 def customer_heatmap(request):
-
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
 # data =     [
 # {
 # position: new google.maps.LatLng(-33.91721, 151.22630),
@@ -3413,6 +3502,8 @@ def customer_heatmap(request):
 
 
 def customer_list(request):
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
 
     user_list = UserProfileInfo.objects.prefetch_related('user').filter(user_type = dbconstants.USER_TYPE_CONSUMER).order_by('-created_at')
     # user_list = User.objects.all().select_related('user_profile_info')
@@ -3488,6 +3579,8 @@ def customer_list(request):
 
 # @login_required
 def orders_list(request):
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
 
 
     # order_list = Order.objects.prefetch_related('user_customer').prefetch_related('user_delivery_agent').all().order_by('-updated_at')
@@ -3578,6 +3671,8 @@ def orders_list(request):
 
 # @login_required
 def product_list(request):
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
 
     product_list = Product.objects.all()
 
@@ -3628,7 +3723,10 @@ def appendServerPath(relative_path):
     return GEN_Constants.SERVER_PREFIX+"media/"+a
 
 def user_login(request):
-    return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_INVALID_DATA), "ERRORS": {}}),
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
+
+    return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_INVALID_DATA), "ERRORS": {}}),
     content_type="application/json")
 
 def get_html_privacy_policy(request):
@@ -3646,6 +3744,9 @@ def user_login(request):
 
     if request.method == "POST":
 
+        dataset = request.POST
+        api_lang = get_api_language_preference(dataset)
+
         username = request.POST['username']
         password = request.POST['password']
 
@@ -3657,19 +3758,19 @@ def user_login(request):
             if user.is_active:
                 print('active')
                 auth_login(request,user)
-                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_LOGIN_SUCCESSFUL)}),
+                return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_LOGIN_SUCCESSFUL,api_lang)}),
                 content_type="application/json")
 
 
                 # return HttpResponseRedirect(reverse('base_app:index'))
             else:
-                errors_dict = {"DATA":get_string_value_by_user(value_constant.KEY_D_NOT_INVALID_DATA)}
+                errors_dict = {"DATA":get_display_translated_value(value_constant.KEY_D_NOT_INVALID_DATA,api_lang)}
                 return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":"2INVALID DATA", "ERRORS": errors_dict}),
                 content_type="application/json")
 
         else:
-            errors_dict = {"DATA":get_string_value_by_user(value_constant.KEY_D_NOT_INVALID_DATA)}
-            return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_string_value_by_user(value_constant.KEY_D_INVALID_DATA), "ERRORS": errors_dict}),
+            errors_dict = {"DATA":get_display_translated_value(value_constant.KEY_D_NOT_INVALID_DATA,api_lang)}
+            return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_INVALID_DATA,api_lang), "ERRORS": errors_dict}),
             content_type="application/json")
 
     else:
@@ -3757,6 +3858,8 @@ def MergeDict(dict1, dict2):
 
 # @csrf_exempt
 def add_enterprise_s(request):
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
     usera = authenticate(request, username = "azr", password = "q1w2e3r41")
     # form_data  = dict_01()
     # # form_data = {"CMN_CommunicationVirtualModel__slug":"TEST","CMN_CommunicationVirtualModel__id":"TEST",  "CMN_CommunicationPhysicalModel__pincode":"601201", "CMN_CommunicationPhysicalModel__slug":"601201"}
@@ -3801,6 +3904,8 @@ def add_enterprise_s(request):
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 def user_logind(request):
+    received_json_data = json.loads(request.body)
+    api_lang = get_api_language_preference(received_json_data)
     user = authenticate(request, username = "azr", password = "q1w2e3r41")
 
     # # return HttpResponse("Hi came view")
@@ -3836,24 +3941,25 @@ def user_logind(request):
     # else:
     #     print('jdkada')
     #     return render(request, 'GEN/login2.html', {})
-
-
-def index(request):
-    # enterpriseform_s
-    # print("came changestat")
-
-    # if request.method == 'GET':
     #     orders = Order.objects.all()
     #     serializer = OrderSerializer(orders, many=True)
     #     return JsonResponse(serializer.data, safe=False)
     #
     # elif request.method == 'POST':
     #     data = JSONParser.parse(request)
+
+
+def index(request):
+
+    # enterpriseform_s
+    # print("came changestat")
+
+    # if request.method == 'GET':
     #     serializer =OrderSerializer(data=data)
     #
     #     if(serializer.is_valid()):
     #         serializer.save()
-    #         return JsonResponse(serializer.data, status=201)
+    #         return JsonResponse(serializer.data, status=201)[
     #     return JsonResponse(serializer.errors, status=400)
 
     # username = request.POST['username']
