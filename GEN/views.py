@@ -214,19 +214,19 @@ class BrandOrders(APIView):
         if "branch_id" in received_json_data:
             order_list = order_list.filter(branch__id = received_json_data["branch_id"])
 
-        print("order_status_code===1")
+        # print("order_status_code===1")
         if "order_status_code" in received_json_data:
-            print("order_status_code===2")
+            # print("order_status_code===2")
             order_status_code = received_json_data["order_status_code"]
             if order_status_code != "ORD_ALL":
-                print("order_status_code===3")
-                print(order_status_code)
+                # print("order_status_code===3")
+                # print(order_status_code)
                 order_list = order_list.filter(order_status__code = order_status_code)
                 # order_list = order_list.filter(order_status__code = "ORD_APPROVED")
 
 
-        print("final liste count")
-        print("==="+str(order_list.count()))
+        # print("final liste count")
+        # print("==="+str(order_list.count()))
 
         if "filter_start_date" in received_json_data:
             filter_start_date = received_json_data["filter_start_date"]
@@ -236,12 +236,12 @@ class BrandOrders(APIView):
             filter_end_date = received_json_data["filter_end_date"]
             order_list = order_list.filter(schedule_requested_time__lte = filter_end_date+" 23:59:59")
 
-        print("c2==="+str(order_list.count()))
+        # print("c2==="+str(order_list.count()))
         order_list = order_list.order_by('-updated_at')
 
 
-        order_list = get_paginated_data(order_list, page_no, page_size=3)
-        print("c3==="+str(order_list.count()))
+        order_list = get_paginated_data(order_list, page_no, page_size=GEN_Constants.ORDERS_LIST_COUNT_BUSINESS)
+        # print("c3==="+str(order_list.count()))
         order_list_s = BrandOrderListSerializer(order_list, many=True)
 
         # order_list_s
@@ -1018,11 +1018,11 @@ class OrderAcceptedByAgent(APIView):
             # OrderRejectedByAgent
             proceed_client_approval_notification(order_base_id)
 
-        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED,api_lang)}
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_ACCEPTED,api_lang)}
         return Response(base_data)
 
 
-class OrderRejectedByAgent(APIView):
+class OrderCancelledByAgent(APIView):
 
     def post(self,request):
         received_json_data=json.loads(request.body)
@@ -1036,7 +1036,7 @@ class OrderRejectedByAgent(APIView):
 
 
 
-        order_status_q= db_operations_support.get_db_object_g(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_AGENT_REJECTED_NO_SLOT})
+        order_status_q= db_operations_support.get_db_object_g(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_CANCELLED})
 
         order_dataset = {}
 
@@ -1092,7 +1092,42 @@ class OrderRejectedByAgent(APIView):
         base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED,api_lang)}
         return Response(base_data)
 
-def proceed_client_approval_notification(order_base_id):
+class OrderMarkedNoShowByAgent(APIView):
+
+    def post(self,request):
+        received_json_data=json.loads(request.body)
+        api_lang = get_api_language_preference(received_json_data)
+
+
+        print("reee")
+        print(received_json_data)
+
+        order_base_id = received_json_data["order_base_id"]
+
+
+
+        order_status_q= db_operations_support.get_db_object_g(OrderStatus, {"code": GEN_Constants.ORDER_STATUS_NO_SHOW})
+
+        order_dataset = {}
+
+        order_dataset["id"] = order_base_id
+        order_dataset["order_status"] = order_status_q.id
+
+        proceed_current_process_model, serializer_current_process_model = support_serializer_submit.validate_save_instance(Order, order_dataset)
+
+        if proceed_current_process_model == False:
+            print("error savin")
+            print(serializer_current_process_model.errors)
+
+        if proceed_current_process_model:
+            # OrderRejectedByAgent
+            proceed_client_approval_notification(order_base_id,api_lang )
+
+
+        base_data = {"SUCCESS":True, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_ORDER_MARKED_AS_REJECTED,api_lang)}
+        return Response(base_data)
+
+def proceed_client_approval_notification(order_base_id,api_lang):
 
 
 
@@ -1104,11 +1139,11 @@ def proceed_client_approval_notification(order_base_id):
     order_q = db_operations_support.get_db_object_g(Order, {"id": order_base_id})
     reg_id = order_q.user_customer.device_token
 
-    title =get_display_translated_value(value_constant.KEY_D_BOOKING_NOT_CONFIRMED)
-    message = get_display_translated_value(value_constant.KEY_D_TAP_TO_VIEW_DETAILS)
+    title =get_display_translated_value(value_constant.KEY_D_BOOKING_NOT_CONFIRMED,api_lang)
+    message = get_display_translated_value(value_constant.KEY_D_TAP_TO_VIEW_DETAILS,api_lang)
 
     if order_q.order_status.code == GEN_Constants.ORDER_STATUS_AGENT_APPROVED:
-        title =get_display_translated_value(value_constant.KEY_D_BOOKING_CONFIRMED)
+        title =get_display_translated_value(value_constant.KEY_D_BOOKING_CONFIRMED,api_lang)
 
 
 
@@ -1296,7 +1331,7 @@ def get_user_suggestion_list(request):
 @csrf_exempt
 def validate_app(request):
         received_json_data=json.loads(request.body)
-        api_lang = get_api_language_preference(received_json_data)
+
         print("resssa")
         print(received_json_data)
         # validate_app
@@ -1311,7 +1346,7 @@ def validate_app(request):
 def get_user_details(request):
     # phone = "9080349072"
     received_json_data=request.POST
-    api_lang = get_api_language_preference(received_json_data)
+
     print("resssa")
     print(received_json_data)
 
@@ -1329,8 +1364,7 @@ def get_user_details(request):
 
 @csrf_exempt
 def product_list_suggestion(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
 
     # received_json_data=json.loads(request.body)
     # #
@@ -1350,8 +1384,6 @@ def product_list_suggestion(request):
 
 def order_list_user(request):
 
-    received_json_data=json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
     phone = user["phone"]
     # phone = "9080349072"
     user_p = UserProfileInfo.objects.get(phone_primary=phone)
@@ -1392,7 +1424,6 @@ def feed_news(request):
 def feed_contact(request):
 
     received_json_data=json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
     print(received_json_data)
     data = {"SUCCESS": True, "list": [{"card_type": "INFO_NEUTRAL", "data":{"title_text": "Notice", "details_text": "We are providing only the basic essentials because of the COVID19 situation. All the ondemand supplies will be provided up on order once the situation is over.", "bg_color": "#e58a8a"}}, {"card_type": "TITLE", "data": {"title_text": "Order From Home Details"}}, {"card_type": "PHONE", "data": {"title": "Ramesh", "sub_title": "Business Agent", "phone": [8144485556], "photo": "http://206.189.129.128:8000/media/profile_pics/user.png"}}]}
     # {"SUCCESS": True, "list": [{"card_type": "INFO_NEUTRAL", "data":{"title_text": "Notice", "details_text": "We are providing only the basic essentials because of the COVID19 situation. All the ondemand supplies will be provided up on order once the situation is over.", "bg_color": "#e58a8a"}}, {"card_type": "TITLE", "data": {"title_text": "Order From Home Details"}}, {"card_type": "PHONE", "data": {"title": "Mr. Manigandan G", "sub_title": "Delivery Agent", "phone": [9080349072, 9020453454], "photo": "http://206.189.129.128:8000/media/profile_pics/user.png"}}, {"card_type": "PHONE", "data": {"title": "Mr. Rahu G", "sub_title": "Business Agent", "phone": [9080349072, 9020453454], "photo": "http://192.168.0.106:8000/media/profile_pics/user.png"}}, {"card_type": "SUB_TITLE", "data": {"title_text": "COVID19 STATUS"}}, {"card_type": "ARTICLE", "data": {"title": "Coronavirus in Tamil", "sub_title": "Dr. V Ramasubramanian | Apollo Hospitals", "URL": "https://www.youtube.com/watch?v=ZezntM6IAvU", "cover_photo": "http://206.189.129.128:8000/media/profile_pics/maxresdefault.jpg"}}]}
@@ -1448,8 +1479,7 @@ def submit_symptoms(request):
 
 @csrf_exempt
 def change_user_status(request):
-    received_json_data = request.POST
-    api_lang = get_api_language_preference(received_json_data)
+
 
     print("came changestat")
     username = request.POST['username']
@@ -1620,7 +1650,7 @@ class CreateOrder(APIView):
         api_lang = get_api_language_preference(received_json_data)
 
         proceed_current_process_model = True
-        payload = {"title":get_display_translated_value(value_constant.KEY_D_SUCCESSFUL,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION,api_lang)}
+        payload = {"title":get_display_translated_value(value_constant.KEY_D_SUCCESSFUL,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATION,api_lang)}
 
         order_data_set = received_json_data["order"]
         time_str = order_data_set["slot_time"]
@@ -1662,7 +1692,7 @@ class CreateOrder(APIView):
             if(filled_capacity >= store_capacity):
                 proceed_current_process_model = False
                 payload = {"title":get_display_translated_value(value_constant.KEY_D_BOOKING_FAILED,api_lang),
-                           "message":get_display_translated_value(value_constant.KEY_D_SELECTE_BOOKING_TIMING,api_lang)}
+                           "message":get_display_translated_value(value_constant.KEY_D_SELECTE_TIME_BOOKED,api_lang)}
 
         return proceed_current_process_model, payload
 
@@ -1675,7 +1705,7 @@ class CreateOrder(APIView):
             proceed_current_process_model, payload  = self.proceed_save(received_json_data)
 
         if proceed_current_process_model:
-            payload = {"title":get_display_translated_value(value_constant.KEY_D_SUCCESSFUL,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATOION,api_lang)}
+            payload = {"title":get_display_translated_value(value_constant.KEY_D_SUCCESSFUL,api_lang), "message":get_display_translated_value(value_constant.KEY_D_BOOKING_REQUEST_CONFIRMATION,api_lang)}
             return HttpResponse(json.dumps({"SUCCESS":True, "RESPONSE_MESSAGE":payload}),
                 content_type="application/json")
         else:
@@ -2163,8 +2193,7 @@ def order_create(request):
 
 @csrf_exempt
 def change_product_status(request):
-    received_json_data = request.POST
-    api_lang = get_api_language_preference(received_json_data)
+
     print(request.POST)
 
     product_id = request.POST['product_id']
@@ -2291,8 +2320,7 @@ def validate_user(request):
 def change_order_status(request):
 
     print("camemee")
-    received_json_data = request.POST
-    api_lang = get_api_language_preference(received_json_data)
+
     orderid = request.POST['order_id']
     orderstatus = request.POST['order_status']
 
@@ -2998,7 +3026,7 @@ class BranchProductListAdmin2(APIView):
 
         return Response(base_data)
 
-def get_paginated_data(queyset, page_no, page_size = 4):
+def get_paginated_data(queyset, page_no, page_size = GEN_Constants.ORDERS_LIST_COUNT_BUSINESS):
     # size = queyset.count()
     end = page_no * page_size+1
     start = end-page_size
@@ -3475,8 +3503,6 @@ class ProductList(APIView):
 # def get_products(request):
 
 def customer_heatmap(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
 # data =     [
 # {
 # position: new google.maps.LatLng(-33.91721, 151.22630),
@@ -3502,8 +3528,7 @@ def customer_heatmap(request):
 
 
 def customer_list(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
 
     user_list = UserProfileInfo.objects.prefetch_related('user').filter(user_type = dbconstants.USER_TYPE_CONSUMER).order_by('-created_at')
     # user_list = User.objects.all().select_related('user_profile_info')
@@ -3579,8 +3604,7 @@ def customer_list(request):
 
 # @login_required
 def orders_list(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
 
 
     # order_list = Order.objects.prefetch_related('user_customer').prefetch_related('user_delivery_agent').all().order_by('-updated_at')
@@ -3671,8 +3695,7 @@ def orders_list(request):
 
 # @login_required
 def product_list(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
 
     product_list = Product.objects.all()
 
@@ -3723,8 +3746,7 @@ def appendServerPath(relative_path):
     return GEN_Constants.SERVER_PREFIX+"media/"+a
 
 def user_login(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
 
     return HttpResponse(json.dumps({"SUCCESS":False, "RESPONSE_MESSAGE":get_display_translated_value(value_constant.KEY_D_INVALID_DATA), "ERRORS": {}}),
     content_type="application/json")
@@ -3858,8 +3880,7 @@ def MergeDict(dict1, dict2):
 
 # @csrf_exempt
 def add_enterprise_s(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
     usera = authenticate(request, username = "azr", password = "q1w2e3r41")
     # form_data  = dict_01()
     # # form_data = {"CMN_CommunicationVirtualModel__slug":"TEST","CMN_CommunicationVirtualModel__id":"TEST",  "CMN_CommunicationPhysicalModel__pincode":"601201", "CMN_CommunicationPhysicalModel__slug":"601201"}
@@ -3904,8 +3925,7 @@ def add_enterprise_s(request):
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 def user_logind(request):
-    received_json_data = json.loads(request.body)
-    api_lang = get_api_language_preference(received_json_data)
+
     user = authenticate(request, username = "azr", password = "q1w2e3r41")
 
     # # return HttpResponse("Hi came view")

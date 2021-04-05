@@ -180,26 +180,34 @@ class OrderDetail01SerializerWithActions(serializers.ModelSerializer):
     can_accept = serializers.SerializerMethodField()
     can_checkin = serializers.SerializerMethodField()
     can_complete_service = serializers.SerializerMethodField()
+    user_details = serializers.SerializerMethodField()
+    slot_details = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['id', 'can_accept', 'can_checkin', 'can_complete_service', 'requested_time', 'order_id', 'status_code', 'delivery_charges', 'status_text', 'delivery_status', 'order_item']
+        fields = ['id', 'user_details', 'slot_details', 'can_accept', 'can_checkin', 'can_complete_service', 'requested_time', 'order_id', 'status_code', 'delivery_charges', 'status_text', 'delivery_status', 'order_item']
         depth = 0
 
 
+    def get_slot_details(self, obj):
+        return {"slot_display_text":"5 open slots available at selected time block (2 PM to 3PM)", "slot_status_type":1, "slot_total":100, 'slot_filled':95, 'slot_open':5, "slot_block":"2 PM to 3PM"}
+
+    def get_user_details(self, obj):
+        return {"name":"Test Name", 'age':25, "gender":"Male"}
+
     def get_can_accept(self, obj):
-        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
+        return {"STATUS":True, "MESSAGE":"Can Accept Request", "SHOW_MESSAGE":False}
 
     def get_can_complete_service(self, obj):
-        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_COMPLETE_REQUEST), "SHOW_MESSAGE":False}
+        return {"STATUS":True, "MESSAGE":"Can Complete Request", "SHOW_MESSAGE":False}
 
     def get_can_complete_service(self, obj):
 
-        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_ACCEPT_REQUEST), "SHOW_MESSAGE":False}
+        return {"STATUS":True, "MESSAGE":"Can Accept Request", "SHOW_MESSAGE":False}
 
     def get_can_checkin(self, obj):
-        return {"STATUS":True, "MESSAGE":get_display_translated_value(value_constant.KEY_D_CAN_CHECKIN), "SHOW_MESSAGE":False}
-        # return {"STATUS":False, "MESSAGE":"Checkin Timeout", "SHOW_MESSAGE":False}
+        # return {"STATUS":True, "MESSAGE":"Can Checkin", "SHOW_MESSAGE":False}
+        return {"STATUS":False, "MESSAGE":"Checkin Timeout", "SHOW_MESSAGE":True}
 
     def get_requested_time(self, obj):
         return str(obj.schedule_requested_time)

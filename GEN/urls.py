@@ -56,6 +56,8 @@ path('CustomerOrderUpcoming/', views.CustomerOrderUpcoming.as_view(), name = "Cu
 path('CustomerOrderOthers/', views.CustomerOrderOthers.as_view(), name = "CustomerOrderOthers"),
 path('OrderAcceptedByAgent/', views.OrderAcceptedByAgent.as_view(), name = "OrderAcceptedByAgent"),
 path('OrderRejectedByAgent/', views.OrderRejectedByAgent.as_view(), name = "OrderRejectedByAgent"),
+path('OrderCancelledByAgent/', views.OrderCancelledByAgent.as_view(), name = "OrderCancelledByAgent"),
+path('OrderMarkedNoShowByAgent/', views.OrderMarkedNoShowByAgent.as_view(), name = "OrderMarkedNoShowByAgent"),
 path('OrderMarkAsCompleted/', views.OrderMarkAsCompleted.as_view(), name = "OrderMarkAsCompleted"),
 path('OrderMarkAsCheckedIn/', views.OrderMarkAsCheckedIn.as_view(), name = "OrderMarkAsCheckedIn"),
 
